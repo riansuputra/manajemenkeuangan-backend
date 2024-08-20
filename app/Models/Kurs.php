@@ -7,12 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Kurs extends Model
 {
-    protected $table = "kurs";
-    protected $primaryKey = 'id_kurs';
+    use HasFactory;
 
-    protected $fillable = [
-        'id_kurs',
-        'mata_uang',
-        'nilai_tukar',
-    ];
+    protected $table = 'kurs';
+    protected $guarded = [];
+    protected $hidden = ['created_at', 'updated_at'];
 }

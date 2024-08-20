@@ -7,17 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Berita extends Model
 {
-    protected $table = "beritas";
-    protected $primaryKey = 'id_berita';
+    use HasFactory;
 
-    protected $fillable = [
-        'id_berita',
-        'title',
-        'published_at',
-        'image',
-        'url',
-        'description',
-        'publisher_name',
-        'publisher_logo',
-    ];
+    protected $table = 'berita';
+    protected $guarded = [];
+    protected $hidden = ['created_at', 'updated_at'];
 }

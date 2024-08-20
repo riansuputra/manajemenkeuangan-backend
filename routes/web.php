@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StockAPIController;
-
+use App\Http\Controllers\StockController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +22,6 @@ Route::get('/', function () {
 Route::get('/updatestock', [StockAPIController::class, 'updateStock']);
 Route::get('/update', [StockAPIController::class, 'updateStock']);
 Route::post('/dividen', [StockAPIController::class, 'dividen'])->name('dividen');
-
+Route::get('/stock-value', [StockController::class, 'getStockValue']);
 // Route::get('/', [StockAPIController::class, 'index']);
 

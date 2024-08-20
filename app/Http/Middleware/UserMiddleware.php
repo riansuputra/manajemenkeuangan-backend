@@ -18,7 +18,7 @@ class UserMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         if($request->header('user-type') == 'user') {
-            if($user = Auth::guard('users')->user()) {
+            if($user = Auth::guard('user')->user()) {
                 $user = Controller::user($user);
                 $auth = Controller::userAuth('user', $user);
                 $request->merge(['auth' => $auth]);

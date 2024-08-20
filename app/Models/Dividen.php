@@ -7,12 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Dividen extends Model
 {
-    protected $table = "dividens";
-    public $timestamps = false;
-    protected $primaryKey = 'id_dividen';
+    use HasFactory;
 
-    protected $fillable = [
-        'emiten',
-        'dividen',
-    ];
+    protected $table = 'dividen';
+    protected $guarded = [];
+    protected $hidden = ['created_at', 'updated_at'];
 }

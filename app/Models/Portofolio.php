@@ -2,25 +2,23 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class Portofolio extends Model
 {
+    use HasFactory;
 
-    protected $table = "transaksis";
-    protected $fillable = [
-        'id_transaksi',
-        'user_id',
-        'id_saham',
-        'type',
-        'tanggal_transaksi',
-        'volume',
-        'id_sekuritas'
-    ];
-    public $incrementing = false;
-    public $timestamps = false;
-    protected $primaryKey = 'id_transaksi';
-   
-
+    protected $table = 'portofolio';
+    protected $guarded = [];
+    protected $hidden = ['created_at', 'updated_at'];
+  
+    public function saham()
+    {
+        return $this->belongsTo(Saham::class, 'saham_id', 'id');
+    }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
 }

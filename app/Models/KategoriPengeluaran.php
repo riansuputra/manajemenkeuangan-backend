@@ -9,11 +9,16 @@ class KategoriPengeluaran extends Model
 {
     use HasFactory;
 
-    protected $table = "kategori_pengeluarans";
+    protected $table = 'kategori_pengeluaran';
+    protected $guarded = [];
+    protected $hidden = ['created_at', 'updated_at'];
 
-    protected $primaryKey = 'id_kategori_pengeluaran';
-
-    protected $fillable = ['nama_kategori_pengeluaran'];
-
-    public $timestamps = false;
+    public function anggaran()
+    {
+        return $this->hasMany(Anggaran::class, 'kategori_pengeluaran_id', 'id');
+    }
+    public function pengeluaran()
+    {
+        return $this->hasMany(Pengeluaran::class, 'kategori_pengeluaran_id', 'id');
+    }
 }

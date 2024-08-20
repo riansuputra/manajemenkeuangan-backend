@@ -18,7 +18,7 @@ class AdminMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         if($request->header('user-type') == 'admin') {
-            if($admin = Auth::guard('admins')->user()) {
+            if($admin = Auth::guard('admin')->user()) {
                 $auth = Controller::userAuth('admin', $admin);
                 $request->merge(['auth' => $auth]);
                 return $next($request);

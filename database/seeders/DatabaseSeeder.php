@@ -12,13 +12,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $adminUserseeder = new AdminUserSeeder();
-        $adminUserseeder->run();
-        // \App\Models\User::factory(10)->create();
-
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        $this->call([
+            AdminUserSeeder::class,
+            KategoriSeeder::class,
+        ]);
     }
 }

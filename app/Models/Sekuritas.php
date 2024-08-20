@@ -7,14 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Sekuritas extends Model
 {
-    protected $table = "sekuritass";
-    public $timestamps = false;
-    protected $primaryKey = 'id_sekuritas';
-
-    protected $fillable = [
-        'nama_sekuritas',
-        'fee_beli',
-        'fee_jual'
-    ];
-
+    use HasFactory;
+    
+    protected $table = 'sekuritas';
+    protected $guarded = [];
+    protected $hidden = ['created_at', 'updated_at'];
 }

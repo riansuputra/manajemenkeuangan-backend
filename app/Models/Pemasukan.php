@@ -4,20 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\KategoriPengeluaran;
 
 class Pemasukan extends Model
 {
-    protected $table = 'pemasukans';
-    protected $primaryKey = 'id_pemasukan';
-
-    protected $fillable = ['user_id','tanggal','jumlah','catatan','id_kategori_pemasukan'];
+    protected $table = 'pemasukan';
+    protected $guarded = [];
+    protected $hidden = ['created_at', 'updated_at'];
 
     public function kategori_pemasukan()
     {
-        return $this->belongsTo(KategoriPemasukan::class, 'id_kategori_pemasukan', 'id_kategori_pemasukan');
+        return $this->belongsTo(KategoriPemasukan::class, 'kategori_pemasukan_id', 'id');
     }
-
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');

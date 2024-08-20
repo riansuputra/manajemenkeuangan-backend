@@ -12,10 +12,13 @@ class Admin extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $table = 'admins';
-    protected $primaryKey = 'admin_id';
+    protected $table = 'admin';
     protected $guarded = [];
-    protected $hidden = ['password', 'api_token', 'created_at', 'updated_at'];
+    protected $hidden = ['password', 'remember_token', 'api_token', 'created_at', 'updated_at'];
     protected $casts = ['password' => 'hashed'];
 
+    public function permintaan_kategori()
+    {
+        return $this->hasMany(PermintaanKategori::class, 'admin_id', 'id');
+    }
 }

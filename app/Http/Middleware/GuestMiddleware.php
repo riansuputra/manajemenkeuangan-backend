@@ -17,7 +17,7 @@ class GuestMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(Auth::guard('users')->check() || Auth::guard('admins')->check()){
+        if(Auth::guard('user')->check() || Auth::guard('admin')->check()){
             return response()->json([
                 'status' => 'error',
                 'message' => 'Akses ditolak.',
