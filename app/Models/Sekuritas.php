@@ -12,4 +12,9 @@ class Sekuritas extends Model
     protected $table = 'sekuritas';
     protected $guarded = [];
     protected $hidden = ['created_at', 'updated_at'];
+
+    public function transaksi()
+    {
+        return $this->hasMany(Transaksi::class, 'sekuritas_id', 'id');
+    }
 }

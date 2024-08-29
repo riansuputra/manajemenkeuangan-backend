@@ -25,7 +25,7 @@ use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 
-class AuthenticationController extends Controller
+class AuthController extends Controller
 {
     public function registerAdmin(Request $request)
     {

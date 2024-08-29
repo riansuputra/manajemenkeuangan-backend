@@ -5,17 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class BeliSaham extends Model
+class Transaksi extends Model
 {
     use HasFactory;
 
-    protected $table = 'beli_saham';
+    protected $table = 'transaksi';
     protected $guarded = [];
     protected $hidden = ['created_at', 'updated_at'];
   
-    public function saham()
+    public function aset()
     {
-        return $this->belongsTo(Saham::class, 'saham_id', 'id');
+        return $this->belongsTo(Aset::class, 'aset_id', 'id');
     }
     public function sekuritas()
     {
@@ -27,6 +27,6 @@ class BeliSaham extends Model
     }
     public function portofolio()
     {
-        return $this->hasMany(Portofolio::class, 'beli_saham_id', 'id');
+        return $this->hasMany(Portofolio::class, 'transaksi_id', 'id');
     }
 }

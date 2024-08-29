@@ -32,7 +32,6 @@ class SahamController extends Controller
                     'errors' => $e->validator->errors(),
                 ], Response::HTTP_BAD_REQUEST);
             } else {
-                Log::error('Error in index method: ' . $e->getMessage());
                 return response()->json([
                     'message' => $e->getMessage(),
                     'auth' => $request->auth
@@ -75,7 +74,6 @@ class SahamController extends Controller
                     'errors' => $e->validator->errors(),
                 ], Response::HTTP_BAD_REQUEST);
             } else {
-                Log::error('Error in index method: ' . $e->getMessage());
                 return response()->json([
                     'message' => $e->getMessage(),
                     'auth' => $request->auth

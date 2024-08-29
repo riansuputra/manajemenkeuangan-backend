@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('jual_saham', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('user');
-            $table->foreignId('saham_id')->constrained('saham');
+            $table->foreignId('aset_id')->constrained('aset');
             $table->foreignId('sekuritas_id')->constrained('sekuritas');
             $table->date('tanggal_jual');
             $table->bigInteger('volume_jual');

@@ -13,12 +13,16 @@ class Portofolio extends Model
     protected $guarded = [];
     protected $hidden = ['created_at', 'updated_at'];
   
-    public function saham()
+    public function aset()
     {
-        return $this->belongsTo(Saham::class, 'saham_id', 'id');
+        return $this->belongsTo(Aset::class, 'aset_id', 'id');
     }
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+    public function kinerja_portofolio()
+    {
+        return $this->hasMany(KinerjaPortofolio::class, 'portofolio_id', 'id');
     }
 }

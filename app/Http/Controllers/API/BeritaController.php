@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\API;
 
+use Symfony\Component\HttpFoundation\Response;
+use App\Http\Controllers\Controller;
+use Illuminate\Validation\ValidationException;
 use App\Models\Berita;
+use App\Models\Dividen;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 
@@ -11,7 +15,7 @@ class BeritaController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function store()
 {
     $response = Http::acceptJson()
         ->withHeaders([
@@ -23,15 +27,15 @@ class BeritaController extends Controller
     foreach ($data as $item) {
         Berita::updateOrCreate(
             [
-                'title' => $item['title'],
-                'published_at' => $item['published_at'],
-                'url' => $item['url']
+                'judul' => $item['title'],
+                'tanggal_terbit' => $item['published_at'],
+                'link' => $item['url']
             ],
             [
-                'image' => $item['image'],
-                'description' => $item['description'],
-                'publisher_name' => $item['publisher']['name'],
-                'publisher_logo' => $item['publisher']['logo'],
+                'gambar' => $item['image'],
+                'deskripsi' => $item['description'],
+                'nama_penerbit' => $item['publisher']['name'],
+                'logo_penerbit' => $item['publisher']['logo'],
             ]
         );
     }
@@ -53,9 +57,58 @@ class BeritaController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function index(Request $request)
     {
-        //
+        try {
+            $berita = Berita::all();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan daftar berita.',
+                'auth' => $request->auth,
+                'data' => [
+                    'berita' => $berita
+                ],
+            ], Response::HTTP_OK);    
+        } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' => $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
+    public function dividen(Request $request)
+    {
+        try {
+            $dividen = Dividen::all();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan daftar dividen.',
+                'auth' => $request->auth,
+                'data' => [
+                    'dividen' => $dividen
+                ],
+            ], Response::HTTP_OK);    
+        } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' => $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
     /**

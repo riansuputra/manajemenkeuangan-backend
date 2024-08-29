@@ -3,28 +3,32 @@
 namespace App\Http\Controllers\API;
 
 use Exception;
-use App\Models\Pemasukan;
+use App\Models\Transaksi;
+use App\Models\Portofolio;
+use App\Models\Aset;
+use App\Models\Saldo;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;
 
-class PemasukanController extends Controller
+class TransaksiController extends Controller
 {
     public function index(Request $request) 
     {
         try {
-            $pemasukan = new Pemasukan();
+            $transaksi = new Transaksi();
             if($request->auth['user_type'] == 'user') {
-                $pemasukan = $pemasukan->where('user_id', $request->auth['user']['id']);
+                $transaksi = $transaksi->where('user_id', $request->auth['user']['id']);
             }
-            $pemasukan = $pemasukan->with('kategori_pemasukan')
+            $transaksi = $transaksi->with(['aset', 'sekuritas'])
                                    ->get();
             return response()->json([
-                'message' => 'Berhasil mendapatkan pemasukan.',
+                'message' => 'Berhasil mendapatkan transaksi.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $pemasukan
+                    'transaksi' => $transaksi
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {
@@ -47,24 +51,92 @@ class PemasukanController extends Controller
     {
         try{
             $request->validate([
-                'user_id' => 'required',
-                'kategori_pemasukan_id' => 'required',
+                'aset_id' => 'required',
+                'sekuritas_id' => 'nullable',
+                'jenis_transaksi' => 'required',
                 'tanggal' => 'required',
-                'jumlah' => 'required',
-                'catatan' => 'nullable',
+                'volume' => 'nullable',
+                'harga' => 'nullable',
+                'deskripsi' => 'nullable',
+                'cur_price' => 'nullable',
+                'avg_price' => 'nullable',
             ]);
-            $pemasukan = new Pemasukan();
-            $pemasukan->user_id = $request->auth['user']['id'];
-            $pemasukan->kategori_pemasukan_id = $request->kategori_pemasukan_id;
-            $pemasukan->tanggal = $request->tanggal;
-            $pemasukan->jumlah = $request->jumlah;
-            $pemasukan->catatan = $request->catatan;
-            $pemasukan->save();
+
+            $saldo = Saldo::where('user_id', $request->auth['user']['id'])->sum('saldo');
+            if (!$saldo) {
+                return response()->json([
+                    'error' => 'Saldo tidak ditemukan untuk user.'
+                ], Response::HTTP_NOT_FOUND);
+            } else if ($request['harga']) {
+                $total = $request['volume'] * $request['harga'];
+                if ($saldo >= $total) {
+                    $addsaldo = Saldo::create([
+                        'user_id' => $request->auth['user']['id'],
+                        'tanggal' => Carbon::now()->format('Y-m-d'),
+                        'tipe_saldo' => 'saldo',
+                        'saldo' => -($total)
+                    ]);
+                }
+            } else if (!($request['harga'])) {
+                if ($saldo >= $request['volume']) {
+                    $addsaldo = Saldo::create([
+                        'user_id' => $request->auth['user']['id'],
+                        'tanggal' => Carbon::now()->format('Y-m-d'),
+                        'tipe_saldo' => 'saldo',
+                        'saldo' => -($request['volume'])
+                    ]);
+                }
+            } else {
+                return response()->json([
+                    'error' => 'Saldo tidak cukup.'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $transaksi = new Transaksi();
+            $transaksi->user_id = $request->auth['user']['id'];
+            $transaksi->aset_id = $request->aset_id;
+            $transaksi->sekuritas_id = $request->sekuritas_id;
+            $transaksi->jenis_transaksi = $request->jenis_transaksi;
+            $transaksi->tanggal = $request->tanggal;
+            $transaksi->volume = $request->volume;
+            $transaksi->harga = $request->harga;
+            $transaksi->deskripsi = $request->deskripsi;
+            $transaksi->save();
+            
+            $portofolio = Portofolio::where('user_id', $request->auth['user']['id'])
+                                    ->where('aset_id', $request->aset_id)
+                                    ->first();
+
+            if ($portofolio) {
+                $aset = $portofolio->aset;
+                if ($aset) {
+                    if ($aset->tipe_aset === 'saham') {
+                        $portofolio->volume += $request->volume;
+                        $total_value_before = $portofolio->avg_price * ($portofolio->volume - $request->volume);
+                        $total_value_now = $request->harga * $request->volume;
+                        $portofolio->avg_price = ($total_value_before + $total_value_now) / $portofolio->volume;
+                        $portofolio->cur_price = $request->harga;
+                    } elseif ($aset->tipe_aset === 'deposito') {
+                        $portofolio->volume += $request->volume;
+                    } else {
+                        $portofolio->volume += $request->volume;
+                    }
+                }
+            } else {
+                $portofolio = new Portofolio();
+                $portofolio->user_id = $request->auth['user']['id'];
+                $portofolio->aset_id = $request->aset_id;
+                $portofolio->volume = $request->volume;
+                $portofolio->avg_price = $request->harga;
+                $portofolio->cur_price = $request->harga;
+            }
+            $portofolio->save();
+
             return response()->json([
-                'message' => 'Berhasil menambah pemasukan.',
+                'message' => 'Berhasil menambah transaksi.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $pemasukan
+                    'transaksi' => $transaksi
                 ],
             ], Response::HTTP_CREATED);
         } catch (Exception $e) {

@@ -14,7 +14,9 @@ return new class extends Migration
         Schema::create('dividen', function (Blueprint $table) {
             $table->id();
             $table->string('saham');
-            $table->bigInteger('dividen');
+            $table->string('dividen');
+            $table->string('dividen_yield');
+            $table->date('tanggal');
             $table->timestamps();
         });
     }

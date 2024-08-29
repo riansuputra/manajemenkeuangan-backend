@@ -14,10 +14,11 @@ return new class extends Migration
         Schema::create('portofolio', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('user');
-            $table->foreignId('saham_id')->constrained('saham');
+            $table->foreignId('aset_id')->constrained('aset');
             $table->bigInteger('volume');
             $table->bigInteger('avg_price')->nullable();
             $table->bigInteger('cur_price')->nullable();
+            $table->bigInteger('dividen')->nullable();
             $table->timestamps();
         });
     }

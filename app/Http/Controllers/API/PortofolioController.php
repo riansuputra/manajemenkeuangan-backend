@@ -8,13 +8,144 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Portofolio;
 use App\Models\Saham;
+use App\Models\MutasiDana;
+use App\Models\HistorisBulanan;
+use App\Models\HistorisTahunan;
 use App\Models\User;
 use App\Models\Sekuritas;
 use Illuminate\Support\Facades\Auth;
-
+use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Validation\ValidationException;
 
 Class PortofolioController extends Controller
 {
+
+    public function index(Request $request)
+    {
+        try {
+            $portofolio = new Portofolio();
+            if($request->auth['user_type'] == 'user') {
+                $portofolio = $portofolio->where('user_id', $request->auth['user']['id']);
+            }
+            $portofolio = $portofolio->with('saham')
+                                     ->get();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan data pembelian saham.',
+                'auth' => $request->auth,
+                'data' => [
+                    'portofolio' => $portofolio
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
+    public function mutasi_dana(Request $request)
+    {
+        try {
+            $mutasi_dana = new MutasiDana();
+            if($request->auth['user_type'] == 'user') {
+                $mutasi_dana = $mutasi_dana->where('user_id', $request->auth['user']['id']);
+            }
+            $mutasi_dana = $mutasi_dana->get();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan data mutasi dana.',
+                'auth' => $request->auth,
+                'data' => [
+                    'mutasi_dana' => $mutasi_dana
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
+    public function histori_bulanan(Request $request)
+    {
+        try {
+            $histori_bulanan = new HistorisBulanan();
+            if($request->auth['user_type'] == 'user') {
+                $histori_bulanan = $histori_bulanan->where('user_id', $request->auth['user']['id']);
+            }
+            $histori_bulanan = $histori_bulanan->get();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan data historis bulanan.',
+                'auth' => $request->auth,
+                'data' => [
+                    'histori_bulanan' => $histori_bulanan
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
+    public function histori_tahunan(Request $request)
+    {
+        try {
+            $histori_tahunan = new HistorisTahunan();
+            if($request->auth['user_type'] == 'user') {
+                $histori_tahunan = $histori_tahunan->where('user_id', $request->auth['user']['id']);
+            }
+            $histori_tahunan = $histori_tahunan->get();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan data historis tahunan.',
+                'auth' => $request->auth,
+                'data' => [
+                    'histori_tahunan' => $histori_tahunan
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
+
 public function insertData(Request $request)
     {
         try {

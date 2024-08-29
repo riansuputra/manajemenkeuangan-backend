@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use Exception;
 use App\Models\Saldo;
+use App\Models\MutasiDana;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Validation\ValidationException;
@@ -56,6 +57,9 @@ class SaldoController extends Controller
             $saldo->tipe_saldo = $request->tipe_saldo;
             $saldo->saldo = $request->saldo;
             $saldo->save();
+
+            $mutasi = MutasiDana::where();
+
             return response()->json([
                 'message' => 'Berhasil menambah saldo.',
                 'auth' => $request->auth,

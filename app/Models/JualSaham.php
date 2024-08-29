@@ -13,9 +13,9 @@ class JualSaham extends Model
     protected $guarded = [];
     protected $hidden = ['created_at', 'updated_at'];
   
-    public function saham()
+    public function aset()
     {
-        return $this->belongsTo(Saham::class, 'saham_id', 'id');
+        return $this->belongsTo(Aset::class, 'aset_id', 'id');
     }
     public function sekuritas()
     {

@@ -11,24 +11,17 @@ use Exception;
 
 class KategoriPemasukanController extends Controller
 {
-    public function index()
+    public function index(Request $request) 
     {
-        return KategoriPemasukan::paginate(10);
-    }
-
-    public function indexWeb(Request $request) {
         try {
-            $kategoriPemasukan = new KategoriPemasukan();
-            $kategoriPemasukan = $kategoriPemasukan->get();
-            
+            $kategori_pemasukan = KategoriPemasukan::all();
             return response()->json([
-                'message' => 'Berhasil mendapatkan daftar toko.',
+                'message' => 'Berhasil mendapatkan kategori pemasukan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'kategoriPemasukan' => $kategoriPemasukan
+                    'kategori_pemasukan' => $kategori_pemasukan
                 ],
             ], Response::HTTP_OK);
-
         } catch (Exception $e) {
             if($e instanceof ValidationException){
                 return response()->json([
@@ -47,26 +40,123 @@ class KategoriPemasukanController extends Controller
 
     public function store(Request $request)
     {
-        $kategori = KategoriPemasukan::create($request->all());
-        return response()->json($kategori, 201);
+        try{
+            $request->validate([
+                'nama_kategori_pemasukan' => 'required',
+            ]);
+            $kategori_pemasukan = new KategoriPemasukan();
+            $kategori_pemasukan->nama_kategori_pemasukan = $request->nama_kategori_pemasukan;
+            $kategori_pemasukan->save();
+            return response()->json([
+                'message' => 'Berhasil menambah kategori pemasukan.',
+                'auth' => $request->auth,
+                'data' => [
+                    'kategori_pemasukan' => $kategori_pemasukan
+                ],
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        return KategoriPemasukan::findOrFail($id);
+        try{
+            $kategori_pemasukan = new KategoriPemasukan();
+            $kategori_pemasukan = $kategori_pemasukan->findOrFail($id);
+            return response()->json([
+                'message' => 'Berhasil mendapatkan detail kategori pemasukan.',
+                'auth' => $request->auth,
+                'data' => [
+                    'pemasukan' => $kategori_pemasukan
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
     public function update(Request $request, $id)
     {
-        $kategori = KategoriPemasukan::findOrFail($id);
-        $kategori->update($request->all());
-        return response()->json($kategori, 200);
+        try{
+            $kategori_pemasukan = new KategoriPemasukan();
+            $kategori_pemasukan = $kategori_pemasukan->findOrFail($id);
+            $request->validate([
+                'nama_kategori_pemasukan' => 'required',
+            ]);
+            $kategori_pemasukan->nama_kategori_pemasukan = $request->nama_kategori_pemasukan;
+            $kategori_pemasukan->save();
+            return response()->json([
+                'message' => 'Berhasil mengubah kategori pemasukan.',
+                'auth' => $request->auth,
+                'data' => [
+                    'pemasukan' => $kategori_pemasukan
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $kategori = KategoriPemasukan::findOrFail($id);
-        $kategori->delete();
-        return response()->json(['message' => 'Kategori Pemasukan deleted'], 200);
+        try{
+            $kategori_pemasukan = new KategoriPemasukan();
+            $kategori_pemasukan = $kategori_pemasukan->findOrFail($id)
+                                   ->delete();
+            return response()->json([
+                'message' => 'Berhasil menghapus kategori pemasukan.',
+                'auth' => $request->auth,
+                'data' => [
+                    'pemasukan' => $kategori_pemasukan
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 }
