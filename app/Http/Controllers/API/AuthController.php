@@ -208,6 +208,9 @@ class AuthController extends Controller
         }
     }
 
+
+
+    
     public function register(Request $request)
     {
         $checkuser = User::where('email', $request['email'])->first();

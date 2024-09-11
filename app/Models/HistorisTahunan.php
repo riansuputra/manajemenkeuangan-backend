@@ -19,6 +19,6 @@ class HistorisTahunan extends Model
     }
     public function historis_bulanan()
     {
-        return $this->belongsTo(HistorisBulanan::class, 'historis_bulanan_id', 'id');
+        return $this->hasMany(HistorisBulanan::class, 'historis_tahunan_id', 'id');
     }
 }

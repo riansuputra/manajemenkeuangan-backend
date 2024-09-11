@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use Exception;
+use Carbon\Carbon;
 use App\Models\Saldo;
 use App\Models\MutasiDana;
 use Illuminate\Http\Request;
@@ -58,13 +59,42 @@ class SaldoController extends Controller
             $saldo->saldo = $request->saldo;
             $saldo->save();
 
-            $mutasi = MutasiDana::where();
+            $tanggal = Carbon::parse($request->tanggal);
+            $tahun = $tanggal->year;
+            $bulan = $tanggal->month;
 
+            $mutasi = MutasiDana::where('user_id', $request->auth['user']['id'])
+                             ->where('tahun', $tahun)
+                             ->where('bulan', $bulan)
+                             ->first();
+
+            if ($mutasi) {
+                // Update the existing record
+                if ($request->tipe_saldo == 'masuk') {
+                    $mutasi->alur_dana += $request->saldo;
+                } elseif ($request->tipe_saldo == 'keluar') {
+                    $mutasi->alur_dana -= $request->saldo;
+                }
+                $mutasi->save();
+                $mutasi_baru = $mutasi;
+            } else {
+                // Create a new MutasiDana record
+                $mutasi_baru = new MutasiDana();
+                $mutasi_baru->user_id = $request->auth['user']['id'];
+                $mutasi_baru->tahun = $tahun;
+                $mutasi_baru->bulan = $bulan;
+                $mutasi_baru->modal = $request->saldo;
+                $mutasi_baru->harga_unit = 1000;
+                $mutasi_baru->alur_dana = $request->tipe_saldo == 'masuk' ? $request->saldo : -($request->saldo);
+                $mutasi_baru->save();
+            }
+            
             return response()->json([
                 'message' => 'Berhasil menambah saldo.',
                 'auth' => $request->auth,
                 'data' => [
-                    'saldo' => $saldo
+                    'saldo' => $saldo,
+                    'mutasi' => $mutasi_baru,
                 ],
             ], Response::HTTP_CREATED);
         } catch (Exception $e) {
@@ -168,6 +198,36 @@ class SaldoController extends Controller
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
+    public function mutasiDana(Request $request) {
+        try {
+            $mutasi = new MutasiDana();
+            if($request->auth['user_type'] == 'user') {
+                $mutasi = $mutasi->where('user_id', $request->auth['user']['id']);
+            }
+            $mutasi = $mutasi->get();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan mutasi.',
+                'auth' => $request->auth,
+                'data' => [
+                    'mutasi' => $mutasi
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) { 
             if($e instanceof ValidationException){
                 return response()->json([
                     'message' => $e->getMessage(),

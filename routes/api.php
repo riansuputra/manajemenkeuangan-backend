@@ -15,6 +15,7 @@ use App\Http\Controllers\API\SaldoController;
 use App\Http\Controllers\API\BeritaController;
 use App\Http\Controllers\API\DividenController;
 use App\Http\Controllers\API\AnggaranController;
+use App\Http\Controllers\API\HistorisController;
 use App\Http\Controllers\API\TransaksiController;
 use App\Http\Controllers\API\BeliSahamController;
 use App\Http\Controllers\API\JualSahamController;
@@ -57,15 +58,18 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::apiResource('pemasukan', PemasukanController::class);
         Route::apiResource('pengeluaran', PengeluaranController::class);
         Route::apiResource('beli-saham', BeliSahamController::class);
-        Route::apiResource('saldo', SaldoController::class);
         Route::apiResource('portofolio', PortofolioController::class);
         Route::apiResource('kategori-pemasukan', KategoriPemasukanController::class);
         Route::apiResource('kategori-pengeluaran', KategoriPengeluaranController::class);
         Route::apiResource('anggaran', AnggaranController::class);
         Route::apiResource('kurs', KursController::class);
         Route::apiResource('dividen', DividenController::class);
-        
         Route::apiResource('transaksi', TransaksiController::class);
+        Route::apiResource('sekuritas', SekuritasController::class);
+        Route::apiResource('historis', HistorisController::class);
+        
+        Route::apiResource('saldo', SaldoController::class);
+        Route::get('/mutasi-dana', [SaldoController::class, 'mutasiDana']);
 
         // Route::apiResource('aset', AsetController::class);
         Route::get('/aset/store-ewallet', [AsetController::class, 'storeEwallet']);
@@ -77,7 +81,7 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::get('/saham/update', [SahamController::class, 'update']);
 
         
-        Route::get('/histori-tahunan', [PortofolioController::class, 'histori_tahunan']);
+        Route::get('/histori', [PortofolioController::class, 'histori_tahunan']);
         Route::get('/histori-bulanan', [PortofolioController::class, 'histori_bulanan']);
         Route::get('/mutasi-dana', [PortofolioController::class, 'mutasi_dana']);
         
@@ -87,11 +91,10 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::get('/pengeluaransWeb', [PengeluaranController::class, 'indexWeb']);
 
 
-        Route::apiResource('tagihans', TagihanController::class);
 
-        Route::get('/kategori_pemasukansWeb', [KategoriPemasukanController::class, 'indexWeb']);
+        // Route::get('/kategori_pemasukansWeb', [KategoriPemasukanController::class, 'indexWeb']);
 
-        Route::get('/kategori_pengeluaransWeb', [KategoriPengeluaranController::class, 'indexWeb']);
+        // Route::get('/kategori_pengeluaransWeb', [KategoriPengeluaranController::class, 'indexWeb']);
 
         Route::get('/category-request', [CategoryRequestController::class, 'index']);
 
@@ -142,7 +145,6 @@ Route::get('/berita', [BeritaController::class, 'index']);
 // Route::apiResource('portofoliojual', PortofolioJualController::class);
 // Route::post('saldo/user', [SaldoController::class, 'saldoUser']);
 // Route::apiResource('saldo', SaldoController::class);
-// Route::apiResource('sekuritas', SekuritasController::class);
 
 // Route::apiResource('pemasukans',PemasukanController::class);
 // Route::apiResource('pengeluarans', PengeluaranController::class);

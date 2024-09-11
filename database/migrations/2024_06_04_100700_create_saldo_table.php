@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('user');
             $table->date('tanggal');
-            $table->enum('tipe_saldo', ['saldo', 'dividen']);
+            $table->enum('tipe_saldo', ['masuk', 'dividen', 'keluar']);
             $table->bigInteger('saldo');
             $table->timestamps();
         });

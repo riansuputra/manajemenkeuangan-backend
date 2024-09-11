@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('user');
             $table->foreignId('admin_id')->constrained('admin')->nullable();
-            $table->enum('tipe_kategori', ['Pemasukan', 'Pengeluaran', 'Lainnya']);
+            $table->enum('tipe_kategori', ['pemasukan', 'pengeluaran', 'lainnya']);
             $table->string('nama_kategori');
-            $table->enum('status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->text('message')->nullable();
             $table->timestamps();
         });

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Portofolio;
 use App\Models\Saham;
+use App\Models\Aset;
 use App\Models\MutasiDana;
 use App\Models\HistorisBulanan;
 use App\Models\HistorisTahunan;

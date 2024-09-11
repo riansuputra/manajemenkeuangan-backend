@@ -3,37 +3,26 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Sekuritas;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;
 use Exception;
 
 class SekuritasController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        return Sekuritas::paginate(10);
-    }
-
-    public function indexWeb(Request $request) {
+    public function index(Request $request) {
         try {
-            $sekuritas = new Sekuritas();
-            $sekuritas = Sekuritas::where('user_id', $request->auth['user']['user_id'])
-                                ->with('kategori_pemasukan')
-                                ->get();
-            
+            $sekuritas = Sekuritas::all();
             return response()->json([
-                'message' => 'Berhasil mendapatkan daftar toko.',
+                'message' => 'Berhasil mendapatkan sekuritas.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $sekuritas
+                    'sekuritas' => $sekuritas
                 ],
             ], Response::HTTP_OK);
-
         } catch (Exception $e) {
             if($e instanceof ValidationException){
                 return response()->json([
@@ -52,39 +41,127 @@ class SekuritasController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'nama_sekuritas' => 'required',
-            'fee_beli' => 'required',
-            'fee_jual' => 'required',
-        ]);
-
-        $sekuritas = Sekuritas::create($data);
-        return response()->json(['message' => 'Sekuritas created', 'sekuritas' => $sekuritas], 201);
+        try{
+            $request->validate([
+                'nama_sekuritas' => 'required',
+                'fee' => 'nullable',
+            ]);
+            $sekuritas = new Sekuritas();
+            $sekuritas->nama_sekuritas = $request->nama_sekuritas;
+            $sekuritas->fee = $request->fee;
+            $sekuritas->save();
+            return response()->json([
+                'message' => 'Berhasil menambah sekuritas.',
+                'auth' => $request->auth,
+                'data' => [
+                    'sekuritas' => $sekuritas
+                ],
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        $sekuritas = Sekuritas::findOrFail($id);
-        return response()->json(['sekuritas' => $sekuritas], 200);
+        try{
+            $sekuritas = new Sekuritas();
+            $sekuritas = $sekuritas->findOrFail($id);
+            return response()->json([
+                'message' => 'Berhasil mendapatkan detail sekuritas.',
+                'auth' => $request->auth,
+                'data' => [
+                    'sekuritas' => $sekuritas
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
     public function update(Request $request, $id)
     {
-        $sekuritas = Sekuritas::findOrFail($id);
-        $data = $request->validate([
-            'nama_sekuritas' => 'required',
-            'fee_beli' => 'required',
-            'fee_jual' => 'required',
-        ]);
-
-        $sekuritas->update($data);
-        return response()->json(['message' => 'Sekuritas updated', 'sekuritas' => $sekuritas], 200);
+        try{
+            $sekuritas = new Sekuritas();
+            $sekuritas = $sekuritas->findOrFail($id);
+            $request->validate([
+                'nama_sekuritas' => 'required',
+                'fee' => 'nullable',
+            ]);
+            $sekuritas->nama_sekuritas = $request->nama_sekuritas;
+            $sekuritas->fee = $request->fee;
+            $sekuritas->save();
+            return response()->json([
+                'message' => 'Berhasil mengubah sekuritas.',
+                'auth' => $request->auth,
+                'data' => [
+                    'sekuritas' => $sekuritas
+                ],
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $sekuritas = Sekuritas::findOrFail($id);
-        $sekuritas->delete();
-        return response()->json(['message' => 'Sekuritas deleted'], 200);
+        try{
+            $sekuritas = new Sekuritas();
+            $sekuritas = $sekuritas->findOrFail($id)
+                                   ->delete();
+            return response()->json([
+                'message' => 'Berhasil menghapus sekuritas.',
+                'auth' => $request->auth,
+                'data' => [
+                    'sekuritas' => $sekuritas
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 }

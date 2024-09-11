@@ -79,7 +79,7 @@ class KategoriPemasukanController extends Controller
                 'message' => 'Berhasil mendapatkan detail kategori pemasukan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $kategori_pemasukan
+                    'kategori_pemasukan' => $kategori_pemasukan
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {
@@ -112,7 +112,7 @@ class KategoriPemasukanController extends Controller
                 'message' => 'Berhasil mengubah kategori pemasukan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $kategori_pemasukan
+                    'kategori_pemasukan' => $kategori_pemasukan
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {
@@ -141,7 +141,7 @@ class KategoriPemasukanController extends Controller
                 'message' => 'Berhasil menghapus kategori pemasukan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $kategori_pemasukan
+                    'kategori_pemasukan' => $kategori_pemasukan
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {

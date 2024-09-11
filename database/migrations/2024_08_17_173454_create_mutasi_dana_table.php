@@ -18,7 +18,6 @@ return new class extends Migration
             $table->tinyInteger('bulan');
             $table->bigInteger('modal');
             $table->bigInteger('harga_unit');
-            $table->bigInteger('jumlah_unit');
             $table->bigInteger('alur_dana')->nullable();
             $table->timestamps();
         });
