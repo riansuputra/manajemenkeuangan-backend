@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('user');
             $table->foreignId('mutasi_dana_id')->constrained('mutasi_dana');
-            $table->foreignId('portofolio_id')->constrained('portofolio');
+            $table->bigInteger('valuasi_saat_ini')->nullable();
             $table->decimal('yield', 10, 2)->nullable();
-            $table->integer('ihsg_start')->nullable();
+            $table->integer('ihsg_start')->nullable(); 
             $table->integer('ihsg_end')->nullable();
             $table->decimal('yield_ihsg', 10, 2)->nullable();
             $table->timestamps();

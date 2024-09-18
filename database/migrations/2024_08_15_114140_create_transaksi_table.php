@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('user');
             $table->foreignId('aset_id')->constrained('aset');
             $table->foreignId('sekuritas_id')->nullable()->constrained('sekuritas');
-            $table->enum('jenis_transaksi', ['beli', 'jual', 'deposit', 'tarik', 'dividen']);
+            $table->enum('jenis_transaksi', ['beli', 'jual', 'deposit', 'tarik', 'dividen', 'kas']);
             $table->date('tanggal');
             $table->bigInteger('volume')->nullable();
             $table->bigInteger('harga')->nullable();

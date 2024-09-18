@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('user');
             $table->foreignId('aset_id')->constrained('aset');
+            $table->foreignId('kinerja_portofolio_id')->constrained('kinerja_portofolio');
             $table->bigInteger('volume');
             $table->bigInteger('avg_price')->nullable();
             $table->bigInteger('cur_price')->nullable();

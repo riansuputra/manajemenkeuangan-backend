@@ -19,7 +19,7 @@ class KinerjaPortofolio extends Model
     }
     public function portofolio()
     {
-        return $this->belongsTo(Portofolio::class, 'portfolio_id', 'id');
+        return $this->hasMany(Portofolio::class, 'kinerja_portofolio_id', 'id');
     }
     public function user()
     {

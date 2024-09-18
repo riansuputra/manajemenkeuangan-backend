@@ -73,7 +73,7 @@ class TransaksiController extends Controller
                     $addsaldo = Saldo::create([
                         'user_id' => $request->auth['user']['id'],
                         'tanggal' => Carbon::now()->format('Y-m-d'),
-                        'tipe_saldo' => 'saldo',
+                        'tipe_saldo' => 'keluar',
                         'saldo' => -($total)
                     ]);
                 }
@@ -82,13 +82,13 @@ class TransaksiController extends Controller
                     $addsaldo = Saldo::create([
                         'user_id' => $request->auth['user']['id'],
                         'tanggal' => Carbon::now()->format('Y-m-d'),
-                        'tipe_saldo' => 'saldo',
+                        'tipe_saldo' => 'keluar',
                         'saldo' => -($request['volume'])
                     ]);
                 }
             } else {
                 return response()->json([
-                    'error' => 'Saldo tidak cukup.'
+                    'message' => 'Saldo tidak cukup.'
                 ], Response::HTTP_BAD_REQUEST);
             }
 

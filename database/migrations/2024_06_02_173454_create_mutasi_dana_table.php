@@ -16,8 +16,10 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('user');
             $table->integer('tahun');
             $table->tinyInteger('bulan');
-            $table->bigInteger('modal');
-            $table->bigInteger('harga_unit');
+            $table->bigInteger('modal')->nullable();
+            $table->bigInteger('harga_unit')->nullable();
+            $table->bigInteger('harga_unit_saat_ini')->nullable();
+            $table->bigInteger('jumlah_unit_penyertaan')->nullable();
             $table->bigInteger('alur_dana')->nullable();
             $table->timestamps();
         });

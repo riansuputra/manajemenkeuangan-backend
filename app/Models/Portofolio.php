@@ -23,6 +23,6 @@ class Portofolio extends Model
     }
     public function kinerja_portofolio()
     {
-        return $this->hasMany(KinerjaPortofolio::class, 'portofolio_id', 'id');
+        return $this->belongsTo(KinerjaPortofolio::class, 'kinerja_portofolio_id', 'id');
     }
 }
