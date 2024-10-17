@@ -9,7 +9,6 @@ class Pemasukan extends Model
 {
     protected $table = 'pemasukan';
     protected $guarded = [];
-    protected $hidden = ['created_at', 'updated_at'];
 
     public function kategori_pemasukan()
     {

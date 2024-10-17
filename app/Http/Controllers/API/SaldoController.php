@@ -92,7 +92,8 @@ class SaldoController extends Controller
                     $harga_unit = ceil($kinerja->valuasi_saat_ini / $mutasi->jumlah_unit_penyertaan);
                     $jumlah_unit_penyertaan = $mutasi->jumlah_unit_penyertaan + ($saldo->saldo / $harga_unit);
                     // dd($harga_unit);
-
+                    // dd($jumlah_unit_penyertaan);
+                    
                     if ($mutasi) {
                         $mutasi->alur_dana += $saldo->saldo;
                         $mutasi->jumlah_unit_penyertaan = $jumlah_unit_penyertaan;
@@ -107,9 +108,12 @@ class SaldoController extends Controller
                         $mutasi_baru->user_id = $request->auth['user']['id'];
                         $mutasi_baru->tahun = $tahun;
                         $mutasi_baru->bulan = $bulan;
+                        $mutasi_baru->harga_unit = 1000;
                         $mutasi_baru->harga_unit_saat_ini = $harga_unit;
+                        $mutasi_baru->jumlah_unit_penyertaan = $saldo->saldo / 1000;
                         $mutasi_baru->alur_dana += $saldo->saldo;
                         $mutasi_baru->save();
+                        
                         $kinerja->yield = ($mutasi_baru->harga_unit_saat_ini - $mutasi->harga_unit) / $mutasi->harga_unit;
                         $kinerja->save();
                     }
@@ -158,7 +162,7 @@ class SaldoController extends Controller
 
                 $transaksi = new Transaksi();
                 $transaksi->user_id = $request->auth['user']['id'];
-                $transaksi->aset_id = 1165;
+                $transaksi->aset_id = 1165; // Aset : Kas
                 $transaksi->jenis_transaksi = 'kas';
                 $transaksi->tanggal = $request->tanggal;
                 $transaksi->volume = 1;
@@ -168,7 +172,7 @@ class SaldoController extends Controller
                 $portofolio = new Portofolio();
                 $portofolio->user_id = $request->auth['user']['id'];
                 $portofolio->kinerja_portofolio_id = $kinerja->id;
-                $portofolio->aset_id = 1165;
+                $portofolio->aset_id = 1165; // Aset : Kas
                 $portofolio->volume = 1;
                 $portofolio->cur_price = $request->saldo;
                 $portofolio->save();

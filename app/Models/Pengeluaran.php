@@ -11,7 +11,6 @@ class Pengeluaran extends Model
 
     protected $table = 'pengeluaran';
     protected $guarded = [];
-    protected $hidden = ['created_at', 'updated_at'];
 
     public function kategori_pengeluaran()
     {
