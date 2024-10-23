@@ -46,14 +46,18 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
     Route::get('/auth', [AuthController::class, 'auth']);
 
     Route::middleware([GuestMiddleware::class])->group(function () {
-        Route::post('/login', [AuthController::class, 'loginUser']);
         Route::post('/register', [AuthController::class, 'registerUser']);
+        Route::post('/login', [AuthController::class, 'loginUser']);
+
         Route::post('/admin/login', [AuthController::class, 'loginAdmin']);
         Route::post('/admin/register', [AuthController::class, 'registerAdmin']);
+        
+        Route::post('/kirim-verifikasi', [AuthController::class, 'sendTestEmail']);
+        Route::get('/verifikasi-email/{code}', [AuthController::class, 'verifyEmail']);
     });
 
     Route::middleware([AdminUserMiddleware::class])->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/logout', [AuthController::class, 'logout']);
 
         Route::apiResource('pemasukan', PemasukanController::class);
         Route::apiResource('pengeluaran', PengeluaranController::class);

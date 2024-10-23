@@ -24,6 +24,7 @@ use Illuminate\Auth\AuthenticationException;
 use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -33,6 +34,7 @@ class AuthController extends Controller
             'email' => 'required',
             'name' => 'required',
             'password' => 'required',
+            'konfirmasiPassword' => 'required|same:password',
         ]);
         $admin = array(
             'email' => $request->email,
@@ -87,45 +89,101 @@ class AuthController extends Controller
     public function registerUser(Request $request)
     {
         $validated = $request->validate([
-            'email' => 'required|unique:App\Models\User,email',
-            'name' => 'required',
-            'password' => 'required',
+            'email' => 'required|string|unique:App\Models\User,email',
+            'name' => 'required|string|min:3|max:100',
+            'password' => 'required|string|min:8|max:20|same:konfirmasiPassword',
+            'konfirmasiPassword' => 'required|string|same:password',
+        ], [
+            'email.unique' => 'Email ini sudah terdaftar. Silakan gunakan email lain atau login.',
+            'name.required' => 'Nama harus diisi dan minimal 3 karakter.',
+            'name.min' => 'Nama harus diisi minimal 3 karakter.',
+            'password.min' => 'Password harus memiliki panjang minimal 8 karakter.',
+            'password.max' => 'Password harus memiliki panjang maksimal 20 karakter.',
+            'password.same' => 'Password dan konfirmasi password harus sesuai.',
+            'konfirmasiPassword.same' => 'Konfirmasi password dan password harus sesuai.',
         ]);
-        $user = array(
+
+        $code = Str::random(60);
+        $userData = [
             'email' => $request->email,
             'name' => $request->name,
             'password' => Hash::make($request->password),
-            'email_verification_code' => Str::random(60),
-        );
+            'email_verification_code' => $code,
+        ];
 
         try {
             DB::beginTransaction();
-            $user = User::create($user);
+            $user = User::create($userData);
             DB::commit();
+
+            // Mail::send('emails.verify', ['code' => $code, 'name' => $user->name], function ($message) use ($user) {
+            //     $message->to($user->email);
+            //     $message->subject('Verifikasi Email Anda');
+            // });
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'Berhasil daftar akun. Silahkan masuk sebagai user.',
+                'message' => 'Berhasil daftar akun. Silakan melakukan login.',
             ], Response::HTTP_CREATED);
         } catch (Exception $e) {
             DB::rollback();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal daftar akun user.'
+                'message' => 'Gagal daftar akun user.',
+                'error' => $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public function verifyEmail($code)
+    {
+        $user = User::where('email_verification_code', $code)->first();
+        // dd($user);
+
+        if (!$user) {
+            return redirect('/')->with('error', 'Token verifikasi tidak valid.');
+        }
+
+        $user->email_verified_at = now();
+        $user->email_verification_code = null;
+        $user->save();
+
+        return redirect('http://localhost:8001/login')->with('message', 'Email Anda berhasil diverifikasi! Sekarang Anda bisa login.');
     }
 
     public function loginUser(Request $request)
     {
         $validated = $request->validate([
-            'email' => 'required',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
         $user = User::where('email', strtolower($validated['email']))->first();
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email ini tidak terdaftar. Periksa kembali atau daftar akun baru.',
+                'errors' => [
+                    'email' => 'Email ini tidak terdaftar.',
+                ]
+            ], Response::HTTP_NOT_FOUND);
+        }
+        if (!Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Password yang Anda masukkan salah. Silakan coba lagi.',
+                'errors' => [
+                    'password' => 'Password tidak sesuai.'
+                ]
+            ], Response::HTTP_UNAUTHORIZED);
+        }
         if (isset($request->user)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Masuk tidak diijinkan saat terautentikasi.',
+                'errors' => [
+                    'email' => 'Email tidak ditemukan.',
+                    'password' => 'Password salah.'
+                ]
             ], Response::HTTP_FORBIDDEN);
         }
         $user->api_token = Str::random(60);
@@ -205,89 +263,6 @@ class AuthController extends Controller
                     'user_type' => 'user',
                 ]
             ], Response::HTTP_OK);
-        }
-    }
-
-
-
-    
-    public function register(Request $request)
-    {
-        $checkuser = User::where('email', $request['email'])->first();
-        if ($checkuser) {
-            return response()->json([
-                'error' => 1,
-                'message' => 'user already exists',
-                'code' => 409
-            ]);
-        }
-
-        $user = User::create([
-            'email' => $request['email'],
-            'password' => Hash::make($request['password']),
-            'name' => $request['name'],
-        ]);
-
-        // Send email with verification code Mailtrap?
-        // Mail::to($user->email)->send(new VerificationMail($user));
-        $email = $request['email'];
-        $subject = 'Silahkan verifikasi akun anda';
-        $message = "Silahkan verifikasi akun anda dengan klik link berikut: ' . url('/') . '/api/verify/' . $user->email_verification_code . ' Terima kasih.";
-
-        $x = Mail::raw($message, function ($message) use ($email, $subject) {
-            $message->to($email)
-                ->subject($subject);
-        });
-
-        return response()->json([
-            'error' => 1,
-            'message' => 'Registration Successfully',
-            'code' => 200,
-            "data" => $user
-        ]);
-
-        // return $this->successResponse($user, 'Registration Successfully');
-    }
-
-    public function testSendEmail()
-    {
-        //send plain text email to "coba@mailinator.com"?
-        $email = 'denyocr.world@gmail.com';
-        $subject = 'Silahkan verifikasi akun anda';
-        $message = "Silahkan verifikasi akun anda dengan klik link berikut: ' . url('/') . '/api/verify/testing Terima kasih.";
-
-        $x = Mail::raw($message, function ($message) use ($email, $subject) {
-            $message->to($email)
-                ->subject($subject);
-        });
-
-        return response()->json([
-            "message" => "Email sent!",
-            "x" => $x,
-            "email" => $email,
-            "subject" => $subject,
-            "message" => $message,
-        ]);
-    }
-
-    public function verify($code)
-    {
-        $user = User::where('email_verification_code', $code)->first();
-        if ($user) {
-            $user->email_verified_at = now();
-            $user->email_verification_code = null;
-            $user->save();
-            return response()->json([
-                'error' => 0,
-                'message' => 'Email Verified Successfully',
-                'code' => Response::HTTP_OK
-            ]);
-        } else {
-            return response()->json([
-                'error' => 1,
-                'message' => 'Invalid Verification Code',
-                'code' => Response::HTTP_NOT_FOUND
-            ]);
         }
     }
 }

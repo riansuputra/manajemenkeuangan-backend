@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StockAPIController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\API\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,4 +25,6 @@ Route::get('/update', [StockAPIController::class, 'updateStock']);
 Route::post('/dividen', [StockAPIController::class, 'dividen'])->name('dividen');
 Route::get('/stock-value', [StockController::class, 'getStockValue']);
 // Route::get('/', [StockAPIController::class, 'index']);
+
+Route::middleware('guest')->get('/verifikasi-email/{code}', [AuthController::class, 'verifyEmail']);
 
