@@ -2,39 +2,38 @@
 
 namespace App\Http\Controllers\API;
 
-use Exception;
-use App\Models\Pemasukan;
-use Illuminate\Http\Request;
+use App\Models\Catatan;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
+use Carbon\Carbon;
+use Exception;
 
-class PemasukanController extends Controller
+class CatatanController extends Controller
 {
     public function index(Request $request) 
     {
         try {
-            $pemasukan = new Pemasukan();
-            if($request->auth['user_type'] == 'user') {
-                $pemasukan = $pemasukan->where('user_id', $request->auth['user']['id']);
-            }
-            $pemasukan = $pemasukan->with('kategori_pemasukan')
-                                   ->get();
+            $now = Carbon::now();
+            $catatan = Catatan::where('user_id', $request->auth['user']['id'])
+                                ->get();
             return response()->json([
-                'message' => 'Berhasil mendapatkan pemasukan.',
+                'message' => 'Berhasil mendapatkan daftar catatan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $pemasukan
+                    'catatan' => $catatan,
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {
-            if($e instanceof ValidationException){
+            if ($e instanceof ValidationException) {
                 return response()->json([
                     'message' => $e->getMessage(),
                     'auth' => $request->auth,
-                    'errors' =>  $e->validator->errors(),
+                    'errors' => $e->validator->errors(),
                 ], Response::HTTP_BAD_REQUEST);
-            }else{
+            } else {
                 return response()->json([
                     'message' => $e->getMessage(),
                     'auth' => $request->auth
@@ -43,28 +42,26 @@ class PemasukanController extends Controller
         }
     }
 
-    public function store(Request $request)
+    public function store(Request $request) 
     {
-        try{
+        try {
             $request->validate([
-                'user_id' => 'required',
-                'kategori_pemasukan_id' => 'required',
-                'tanggal' => 'required',
-                'jumlah' => 'required',
-                'catatan' => 'nullable',
+                'judul' => 'required',
+                'catatan' => 'required',
+                'tipe' => 'required',
             ]);
-            $pemasukan = new Pemasukan();
-            $pemasukan->user_id = $request->auth['user']['id'];
-            $pemasukan->kategori_pemasukan_id = $request->kategori_pemasukan_id;
-            $pemasukan->tanggal = $request->tanggal;
-            $pemasukan->jumlah = $request->jumlah;
-            $pemasukan->catatan = $request->catatan;
-            $pemasukan->save();
+            $catatan = new Catatan();
+            $catatan->user_id = $request->auth['user']['id'];
+            $catatan->judul = $request->judul;
+            $catatan->catatan = $request->catatan;
+            $catatan->tipe = $request->tipe;
+            $catatan->warna = $request->warna;
+            $catatan->save();
             return response()->json([
-                'message' => 'Berhasil menambah pemasukan.',
+                'message' => 'Berhasil menambah catatan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $pemasukan
+                    'catatan' => $catatan
                 ],
             ], Response::HTTP_CREATED);
         } catch (Exception $e) {
@@ -83,20 +80,20 @@ class PemasukanController extends Controller
         }
     }
 
-    public function show(Request $request, $id)
+    public function show(Request $request, $id) 
     {
-        try{
-            $pemasukan = new Pemasukan();
+        try {
+            $catatan = new Catatan();
             if($request->auth['user_type'] == 'user') {
-                $pemasukan = $pemasukan->where('user_id', $request->auth['user']['id']);
+                $catatan = $catatan->where('user_id', $request->auth['user']['id']);
             }
-            $pemasukan = $pemasukan->findOrFail($id);
+            $catatan = $catatan->findOrFail($id);
             return response()->json([
-                'message' => 'Berhasil mendapatkan detail pemasukan.',
+                'message' => 'Berhasil mendapatkan detail catatan',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $pemasukan
-                ],
+                    'catatan' => $catatan
+                ]
             ], Response::HTTP_OK);
         } catch (Exception $e) {
             if($e instanceof ValidationException){
@@ -117,25 +114,24 @@ class PemasukanController extends Controller
     public function update(Request $request, $id)
     {
         try{
-            $pemasukan = new Pemasukan();
-            $pemasukan = $pemasukan->where('user_id', $request->auth['user']['id'])
+            $catatan = new Catatan();
+            $catatan = $catatan->where('user_id', $request->auth['user']['id'])
                                    ->findOrFail($id);
             $request->validate([
-                'kategori_pemasukan_id' => 'required',
-                'tanggal' => 'required',
-                'jumlah' => 'required',
-                'catatan' => 'nullable',
+                'judul' => 'required',
+                'catatan' => 'required',
+                'tipe' => 'required',
             ]);
-            $pemasukan->kategori_pemasukan_id = $request->kategori_pemasukan_id;
-            $pemasukan->tanggal = $request->tanggal;
-            $pemasukan->jumlah = $request->jumlah;
-            $pemasukan->catatan = $request->catatan;
-            $pemasukan->save();
+            $catatan->judul = $request->judul;
+            $catatan->catatan = $request->catatan;
+            $catatan->tipe = $request->tipe;
+            $catatan->warna = $request->warna;
+            $catatan->save();
             return response()->json([
-                'message' => 'Berhasil mengubah pemasukan.',
+                'message' => 'Berhasil mengubah catatan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $pemasukan
+                    'catatan' => $catatan
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {
@@ -157,15 +153,15 @@ class PemasukanController extends Controller
     public function destroy(Request $request, $id)
     {
         try{
-            $pemasukan = new Pemasukan();
-            $pemasukan = $pemasukan->where('user_id', $request->auth['user']['id'])
+            $catatan = new Catatan();
+            $catatan = $catatan->where('user_id', $request->auth['user']['id'])
                                    ->findOrFail($id)
                                    ->delete();
             return response()->json([
-                'message' => 'Berhasil menghapus pemasukan.',
+                'message' => 'Berhasil menghapus catatan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $pemasukan
+                    'catatan' => $catatan
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {

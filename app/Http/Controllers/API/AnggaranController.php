@@ -94,7 +94,7 @@ class AnggaranController extends Controller
                 'data' => [
                     'anggaran' => $anggaran
                 ],
-            ], Response::HTTP_OK);
+            ], Response::HTTP_CREATED);
         } catch (Exception $e) {
             if($e instanceof ValidationException){
                 return response()->json([

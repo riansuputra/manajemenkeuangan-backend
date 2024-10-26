@@ -138,7 +138,6 @@ class AuthController extends Controller
     public function verifyEmail($code)
     {
         $user = User::where('email_verification_code', $code)->first();
-        // dd($user);
 
         if (!$user) {
             return redirect('/')->with('error', 'Token verifikasi tidak valid.');

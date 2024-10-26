@@ -14,6 +14,7 @@ use App\Http\Controllers\API\SahamController;
 use App\Http\Controllers\API\SaldoController;
 use App\Http\Controllers\API\BeritaController;
 use App\Http\Controllers\API\DividenController;
+use App\Http\Controllers\API\CatatanController;
 use App\Http\Controllers\API\AnggaranController;
 use App\Http\Controllers\API\HistorisController;
 use App\Http\Controllers\API\TransaksiController;
@@ -30,17 +31,6 @@ use App\Http\Controllers\API\KategoriPemasukanController;
 use App\Http\Controllers\API\TransactionHistoryController;
 use App\Http\Controllers\API\KategoriPengeluaranController;
 use App\Http\Controllers\API\ManajemenPortofolioController;
-
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
 
 Route::middleware([ApiKeyMiddleware::class])->group(function () {
     Route::get('/auth', [AuthController::class, 'auth']);
@@ -61,11 +51,14 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
 
         Route::apiResource('pemasukan', PemasukanController::class);
         Route::apiResource('pengeluaran', PengeluaranController::class);
-        Route::apiResource('beli-saham', BeliSahamController::class);
-        Route::apiResource('portofolio', PortofolioController::class);
         Route::apiResource('kategori-pemasukan', KategoriPemasukanController::class);
         Route::apiResource('kategori-pengeluaran', KategoriPengeluaranController::class);
         Route::apiResource('anggaran', AnggaranController::class);
+
+        Route::apiResource('catatan', CatatanController::class);
+        
+        Route::apiResource('beli-saham', BeliSahamController::class);
+        Route::apiResource('portofolio', PortofolioController::class);
         Route::apiResource('kurs', KursController::class);
         Route::apiResource('dividen', DividenController::class);
         Route::apiResource('transaksi', TransaksiController::class);

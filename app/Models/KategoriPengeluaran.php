@@ -11,7 +11,6 @@ class KategoriPengeluaran extends Model
 
     protected $table = 'kategori_pengeluaran';
     protected $guarded = [];
-    protected $hidden = ['created_at', 'updated_at'];
 
     public function anggaran()
     {
