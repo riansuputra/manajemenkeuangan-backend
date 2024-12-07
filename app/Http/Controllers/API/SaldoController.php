@@ -56,6 +56,7 @@ class SaldoController extends Controller
             ]);
 
             $tanggal = Carbon::parse($request->tanggal);
+
             $tahun = $tanggal->year;
             $bulan = $tanggal->month;
 
@@ -88,12 +89,9 @@ class SaldoController extends Controller
 
                     // dd($kinerja->valuasi_saat_ini);
                     
-
                     $harga_unit = ceil($kinerja->valuasi_saat_ini / $mutasi->jumlah_unit_penyertaan);
                     $jumlah_unit_penyertaan = $mutasi->jumlah_unit_penyertaan + ($saldo->saldo / $harga_unit);
-                    // dd($harga_unit);
-                    // dd($jumlah_unit_penyertaan);
-                    
+                    // dd($harga_unit, $jumlah_unit_penyertaan);
                     if ($mutasi) {
                         $mutasi->alur_dana += $saldo->saldo;
                         $mutasi->jumlah_unit_penyertaan = $jumlah_unit_penyertaan;
@@ -120,7 +118,7 @@ class SaldoController extends Controller
 
                     $transaksi = new Transaksi();
                     $transaksi->user_id = $request->auth['user']['id'];
-                    $transaksi->aset_id = 1165;
+                    $transaksi->aset_id = 1;
                     $transaksi->jenis_transaksi = 'kas';
                     $transaksi->tanggal = $request->tanggal;
                     $transaksi->volume = 1;
@@ -129,12 +127,15 @@ class SaldoController extends Controller
 
                     $portofolio = new Portofolio();
                     $portofolio = $portofolio->where('user_id', $request->auth['user']['id'])
-                                             ->where('aset_id', 1165)
+                                             ->where('aset_id', 1)
                                              ->first();
                     $portofolio->cur_price += $saldo->saldo;
                     $portofolio->save();
-                    
                 }
+            } else if ($request->tipe_saldo == 'keluar') {
+                return response()->json([
+                    'message' => 'Tidak dapat melakukan penarikan karena belum terdapat saldo.'
+                ], Response::HTTP_BAD_REQUEST);
             } else {
                 $saldo = new Saldo();
                 $saldo->user_id = $request->auth['user']['id'];
@@ -142,6 +143,7 @@ class SaldoController extends Controller
                 $saldo->tipe_saldo = $request->tipe_saldo;
                 $saldo->saldo = $request->tipe_saldo == 'keluar' ? -($request->saldo) : $request->saldo;
                 $saldo->save();
+
                 $mutasi_baru = new MutasiDana();
                 $mutasi_baru->user_id = $request->auth['user']['id'];
                 $mutasi_baru->tahun = $tahun;
@@ -162,7 +164,7 @@ class SaldoController extends Controller
 
                 $transaksi = new Transaksi();
                 $transaksi->user_id = $request->auth['user']['id'];
-                $transaksi->aset_id = 1165; // Aset : Kas
+                $transaksi->aset_id = 1; 
                 $transaksi->jenis_transaksi = 'kas';
                 $transaksi->tanggal = $request->tanggal;
                 $transaksi->volume = 1;
@@ -172,7 +174,7 @@ class SaldoController extends Controller
                 $portofolio = new Portofolio();
                 $portofolio->user_id = $request->auth['user']['id'];
                 $portofolio->kinerja_portofolio_id = $kinerja->id;
-                $portofolio->aset_id = 1165; // Aset : Kas
+                $portofolio->aset_id = 1; 
                 $portofolio->volume = 1;
                 $portofolio->cur_price = $request->saldo;
                 $portofolio->save();

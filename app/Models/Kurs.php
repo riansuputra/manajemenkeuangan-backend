@@ -11,5 +11,4 @@ class Kurs extends Model
 
     protected $table = 'kurs';
     protected $guarded = [];
-    protected $hidden = ['created_at', 'updated_at'];
 }

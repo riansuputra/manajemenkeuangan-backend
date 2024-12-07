@@ -40,6 +40,35 @@ class AsetController extends Controller
         }
     }
 
+    public function storeKas(Request $request)
+    {
+        try {
+            $kas = [
+                'tipe_aset' => 'tabungan',
+                'nama' => 'KAS',
+            ];
+                $insert = Aset::create($kas);
+            return response()->json([
+                'message' => 'Berhasil input data kas ke tabel aset.',
+                'auth' => $request->auth,
+            ], Response::HTTP_OK);    
+        } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' => $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                Log::error('Error in index method: ' . $e->getMessage());
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
     public function storeSaham(Request $request)
     {
         try {
@@ -88,6 +117,10 @@ class AsetController extends Controller
     {
         try {
             $eWallets = [
+                [
+                    'tipe_aset' => 'saham',
+                    'nama' => 'LAINNYA',
+                ],
                 [
                     'tipe_aset' => 'tabungan',
                     'nama' => 'GoPay',
@@ -622,6 +655,10 @@ class AsetController extends Controller
                     'tipe_aset' => 'tabungan',
                     'nama' => 'WOORI SAUDARA',
                 ],
+                [
+                    'tipe_aset' => 'tabungan',
+                    'nama' => 'LAINNYA',
+                ],
             ];
             $bankd = [
                 [
@@ -1068,11 +1105,15 @@ class AsetController extends Controller
                     'tipe_aset' => 'deposito',
                     'nama' => 'WOORI SAUDARA',
                 ],
+                [
+                    'tipe_aset' => 'deposito',
+                    'nama' => 'LAINNYA',
+                ],
             ];
-            foreach ($bankd as $item) {
+            foreach ($bankt as $item) {
                 $insert = Aset::create($item);
             }
-            foreach ($bankt as $item) {
+            foreach ($bankd as $item) {
                 $insert = Aset::create($item);
             }
             return response()->json([
@@ -1095,45 +1136,8 @@ class AsetController extends Controller
         }
     }
 
-    public function storeLainnya(Request $request)
+    public function show($id)
     {
-        try {
-            $other = [
-                [
-                    'tipe_aset' => 'tabungan',
-                    'nama' => 'Lainnya',
-                ],
-                [
-                    'tipe_aset' => 'deposito',
-                    'nama' => 'Lainnya',
-                ],
-                [
-                    'tipe_aset' => 'saham',
-                    'nama' => 'Lainnya',
-                ],
-            ];
-
-            foreach ($other as $item) {
-                $insert = Aset::create($item);
-            }
-            return response()->json([
-                'message' => 'Berhasil input data lainnya ke tabel aset.',
-                'auth' => $request->auth,
-            ], Response::HTTP_OK);    
-        } catch (Exception $e) {
-            if ($e instanceof ValidationException) {
-                return response()->json([
-                    'message' => $e->getMessage(),
-                    'auth' => $request->auth,
-                    'errors' => $e->validator->errors(),
-                ], Response::HTTP_BAD_REQUEST);
-            } else {
-                Log::error('Error in index method: ' . $e->getMessage());
-                return response()->json([
-                    'message' => $e->getMessage(),
-                    'auth' => $request->auth
-                ], Response::HTTP_BAD_REQUEST);
-            }
-        }
+        //
     }
 }

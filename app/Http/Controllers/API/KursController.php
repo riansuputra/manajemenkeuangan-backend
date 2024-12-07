@@ -56,6 +56,7 @@ class KursController extends Controller
                 'KRW' => 'South Korean Won (KRW)',
                 'MYR' => 'Malaysian Ringgit (MYR)',
                 'NZD' => 'New Zealand Dollar (NZD)',
+                'PHP' => 'Philippine Peso (PHP)',
                 'SGD' => 'Singapore Dollar (SGD)',
                 'THB' => 'Thai Baht (THB)',
                 'USD' => 'US Dollar (USD)'
@@ -65,7 +66,7 @@ class KursController extends Controller
                 ->withoutVerifying()
                 ->get('https://api.freecurrencyapi.com/v1/latest', [
                     'apikey' => $money_apikey,
-                    'currencies' => 'USD,AUD,EUR,GBP,JPY,MYR,CAD,CHF,NZD,HKD,SGD,CNY,KRW,THB,INR',
+                    'currencies' => 'USD,AUD,EUR,GBP,JPY,MYR,CAD,CHF,NZD,HKD,SGD,CNY,KRW,THB,INR,PHP',
                     'base_currency' => 'IDR'
                 ])->json();
             $data = $response['data'];
@@ -78,14 +79,35 @@ class KursController extends Controller
                 ];
             }
             foreach ($convertedData as $currency => $currencyData) {
-               Kurs::updateOrCreate(
-                   [
-                       'nilai_tukar' => $currencyData['value'],
-                   ],
-                   [
-                       'mata_uang' => $currencyData['name'],
-                   ]
-               );
+                // Ambil data lama dari tabel
+                $existingKurs = Kurs::where('mata_uang', $currencyData['name'])->first();
+            
+                // Periksa apakah data lama ada
+                $oldValue = $existingKurs ? (int)filter_var($existingKurs->nilai_tukar, FILTER_SANITIZE_NUMBER_INT) : null;
+                $newValue = (int)filter_var($currencyData['value'], FILTER_SANITIZE_NUMBER_INT);
+            
+                // Bandingkan nilai lama dan baru
+                $differenceSymbol = '';
+                if (!is_null($oldValue)) {
+                    if ($newValue > $oldValue) {
+                        $differenceSymbol = '+';
+                    } elseif ($newValue < $oldValue) {
+                        $differenceSymbol = '-';
+                    }
+                }
+            
+                // Tambahkan simbol ke nilai tukar baru
+                $currencyData['value'] = $differenceSymbol . $currencyData['value'];
+            
+                // Update atau buat data baru
+                Kurs::updateOrCreate(
+                    [
+                        'mata_uang' => $currencyData['name'], // Cari berdasarkan nama mata uang
+                    ],
+                    [
+                        'nilai_tukar' => $currencyData['value'], // Perbarui nilai tukar
+                    ]
+                );
             }
             return response()->json([
                 'message' => 'Berhasil update data kurs.',

@@ -13,7 +13,7 @@ class User extends Authenticatable
 
     protected $table = 'user';
     protected $guarded = [];
-    protected $hidden = ['password', 'remember_token', 'api_token', 'created_at', 'updated_at'];
+    protected $hidden = ['password', 'remember_token', 'api_token', 'updated_at'];
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',

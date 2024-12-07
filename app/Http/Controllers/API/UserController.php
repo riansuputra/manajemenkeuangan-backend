@@ -5,12 +5,39 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
+use Carbon\Carbon;
+use Exception;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request) 
     {
-        return User::paginate(10);
+        try {
+            $user = User::all();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan daftar user.',
+                'auth' => $request->auth,
+                'data' => [
+                    'user' => $user,
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' => $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
     public function store(Request $request)

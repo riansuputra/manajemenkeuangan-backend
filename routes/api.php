@@ -10,6 +10,7 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Middleware\AdminUserMiddleware;
 use App\Http\Controllers\API\KursController;
 use App\Http\Controllers\API\AsetController;
+use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\SahamController;
 use App\Http\Controllers\API\SaldoController;
 use App\Http\Controllers\API\BeritaController;
@@ -26,7 +27,7 @@ use App\Http\Controllers\API\PortofolioController;
 use App\Http\Controllers\API\PengeluaranController;
 use App\Http\Controllers\API\PortofolioBeliController;
 use App\Http\Controllers\API\PortofolioJualController;
-use App\Http\Controllers\API\CategoryRequestController;
+use App\Http\Controllers\API\PermintaanKategoriController;
 use App\Http\Controllers\API\KategoriPemasukanController;
 use App\Http\Controllers\API\TransactionHistoryController;
 use App\Http\Controllers\API\KategoriPengeluaranController;
@@ -68,10 +69,12 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::apiResource('saldo', SaldoController::class);
         Route::get('/mutasi-dana', [SaldoController::class, 'mutasiDana']);
 
-        // Route::apiResource('aset', AsetController::class);
-        Route::get('/aset/store-ewallet', [AsetController::class, 'storeEwallet']);
-        Route::get('/aset/store-bank', [AsetController::class, 'storeBank']);
-        Route::get('/aset/store-lainnya', [AsetController::class, 'storeLainnya']);
+        Route::apiResource('aset', AsetController::class);
+        Route::post('/aset/store-kas', [AsetController::class, 'storeKas']);
+        Route::post('/aset/store-ewallet', [AsetController::class, 'storeEwallet']);
+        Route::post('/aset/store-bank', [AsetController::class, 'storeBank']);
+        Route::post('/aset/store-lainnya', [AsetController::class, 'storeLainnya']);
+        Route::post('/aset/store-saham', [AsetController::class, 'storeSaham']);
 
 
         Route::get('/saham', [SahamController::class, 'index']);
@@ -83,7 +86,7 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::get('/mutasi-dana', [PortofolioController::class, 'mutasi_dana']);
         
 
-        Route::post('/category-requests', [CategoryRequestController::class, 'storeWeb']);
+        Route::post('/permintaan-kategori', [PermintaanKategoriController::class, 'storeWeb']);
 
         Route::get('/pengeluaransWeb', [PengeluaranController::class, 'indexWeb']);
 
@@ -93,7 +96,7 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
 
         // Route::get('/kategori_pengeluaransWeb', [KategoriPengeluaranController::class, 'indexWeb']);
 
-        Route::get('/category-request', [CategoryRequestController::class, 'index']);
+        Route::get('/category-request', [PermintaanKategoriController::class, 'index']);
 
         Route::get('/porto', [ManajemenPortofolioController::class, 'indexporto']);
         Route::get('/yield', [ManajemenPortofolioController::class, 'yield']);
@@ -110,9 +113,11 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::get('/aset/store-saham', [AsetController::class, 'storeSaham']);
         
         
-        Route::get('/category-requests-admin', [CategoryRequestController::class, 'indexAdmin']);
-        Route::post('/category-requests/{id}/approve', [CategoryRequestController::class, 'approve']);
-        Route::post('/category-requests/{id}/reject', [CategoryRequestController::class, 'reject']);
+        Route::get('/permintaan-kategori-admin', [PermintaanKategoriController::class, 'indexAdmin']);
+        Route::post('/permintaan-kategori/{id}/terima', [PermintaanKategoriController::class, 'approve']);
+        Route::post('/permintaan-kategori/{id}/tolak', [PermintaanKategoriController::class, 'reject']);
+
+        Route::get('/user', [UserController::class, 'index']);
         
         
     });
@@ -135,8 +140,8 @@ Route::get('/berita', [BeritaController::class, 'index']);
 //     return $request->user();
 // });
 
-// Route::post('/category-requests', [CategoryRequestController::class, 'store']); // Simpan Category
-// Route::get('/category-requests', [CategoryRequestController::class, 'indexMobile']); // List request categorie
+// Route::post('/permintaan-kategori', [PermintaanKategoriController::class, 'store']); // Simpan Category
+// Route::get('/permintaan-kategori', [PermintaanKategoriController::class, 'indexMobile']); // List request categorie
 
 // Route::apiResource('portofoliobeli', PortofolioBeliController::class);
 // Route::apiResource('portofoliojual', PortofolioJualController::class);
