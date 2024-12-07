@@ -29,4 +29,8 @@ class Transaksi extends Model
     {
         return $this->hasMany(Portofolio::class, 'transaksi_id', 'id');
     }
+    public function kinerja_portofolio()
+    {
+        return $this->hasMany(KinerjaPortofolio::class, 'transaksi_id', 'id');
+    }
 }

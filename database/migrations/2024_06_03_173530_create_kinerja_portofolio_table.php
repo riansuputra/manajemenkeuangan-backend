@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('kinerja_portofolio', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('user');
-            $table->foreignId('mutasi_dana_id')->constrained('mutasi_dana');
+            $table->foreignId('transaksi_id')->constrained('transaksi');
             $table->bigInteger('valuasi_saat_ini')->nullable();
             $table->decimal('yield', 10, 2)->nullable();
             $table->integer('ihsg_start')->nullable(); 

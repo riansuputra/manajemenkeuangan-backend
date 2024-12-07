@@ -13,10 +13,6 @@ class MutasiDana extends Model
     protected $guarded = [];
     protected $hidden = ['created_at', 'updated_at'];
 
-    public function kinerja_portofolio()
-    {
-        return $this->hasMany(KinerjaPortofolio::class, 'mutasi_dana_id', 'id');
-    }
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');

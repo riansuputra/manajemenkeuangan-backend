@@ -20,7 +20,7 @@ return new class extends Migration
             $table->bigInteger('avg_price')->nullable();
             $table->bigInteger('cur_price')->nullable();
             $table->bigInteger('dividen')->nullable();
-            $table->timestamps();
+            $table->timestamps(); 
         });
     }
 

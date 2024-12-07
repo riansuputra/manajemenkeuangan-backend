@@ -13,9 +13,9 @@ class KinerjaPortofolio extends Model
     protected $guarded = [];
     protected $hidden = ['created_at', 'updated_at'];
 
-    public function mutasi_dana()
+    public function transaksi()
     {
-        return $this->belongsTo(MutasiDana::class, 'mutasi_dana_id', 'id');
+        return $this->belongsTo(Transaksi::class, 'transaksi_id', 'id');
     }
     public function portofolio()
     {
