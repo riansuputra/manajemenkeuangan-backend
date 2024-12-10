@@ -8,6 +8,8 @@ use App\Models\Saldo;
 use App\Models\MutasiDana;
 use App\Models\KinerjaPortofolio;
 use App\Models\Portofolio;
+use App\Models\HistorisBulanan;
+use App\Models\HistorisTahunan;
 use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -105,6 +107,14 @@ class SaldoController extends Controller
                         ->orderBy('created_at', 'desc')
                         ->first();
 
+                    $ht_tahun = HistorisTahunan::where('user_id', $request->auth['user']['id'])
+                        ->where('tahun', $tahun)
+                        ->first();
+
+                    $ht_bulan = HistorisBulanan::where('user_id', $request->auth['user']['id'])
+                        ->where('bulan', $bulan)
+                        ->first();
+
                     $portofolio = Portofolio::where('user_id', $request->auth['user']['id'])
                         ->where('aset_id', 1)
                         ->orderBy('created_at', 'desc')
@@ -138,6 +148,22 @@ class SaldoController extends Controller
                         $kinerja_baru->valuasi_saat_ini = $kinerja->valuasi_saat_ini + $reqsaldo;
                         $kinerja_baru->yield = ($mutasi_baru->harga_unit_saat_ini - $mutasi->harga_unit) / $mutasi->harga_unit;
                         $kinerja_baru->save();
+
+                        // masukkan ke histori tahunan dan bulanan
+                        $ht_tahun->yield = $kinerja_baru->yield;
+                        $ht_tahun->save();
+
+                        if ($ht_bulan) {
+                            $ht_bulan->yield = $kinerja_baru->yield;
+                            $ht_bulan->save();
+                        } else {
+                            $ht_bulan_baru = new HistorisBulanan();
+                            $ht_bulan_baru->user_id = $request->auth['user']['id'];
+                            $ht_bulan_baru->historis_tahunan_id = $ht_tahun->id;
+                            $ht_bulan_baru->bulan = $bulan;
+                            $ht_bulan_baru->yield = $kinerja_baru->yield;
+                            $ht_bulan_baru->save();
+                        }
 
                         // masukkan portofolio untuk pertama kali               
                         $portofolio_baru = new Portofolio();
@@ -185,6 +211,21 @@ class SaldoController extends Controller
                         $kinerja_tahun_baru->yield = 0.00;
                         $kinerja_tahun_baru->save();
 
+                        // masukkan ke histori tahunan dan bulanan
+                        $ht_tahun_baru2 = new HistorisTahunan();
+                        $ht_tahun_baru2->user_id = $request->auth['user']['id'];
+                        $ht_tahun_baru2->tahun = $tahun;
+                        $ht_tahun_baru2->yield = $kinerja_tahun_baru->yield;
+                        $ht_tahun_baru2->save();
+                       
+                        $ht_bulan_baru2 = new HistorisBulanan();
+                        $ht_bulan_baru2->user_id = $request->auth['user']['id'];
+                        $ht_bulan_baru2->historis_tahunan_id = $ht_tahun_baru2->id;
+                        $ht_bulan_baru2->bulan = $bulan;
+                        $ht_bulan_baru2->yield = $kinerja_tahun_baru->yield;
+                        $ht_bulan_baru2->save();
+                        
+
                         // masukkan portofolio untuk pertama kali di tahun tersebut          
                         $portofolio_tahun_baru = new Portofolio();
                         $portofolio_tahun_baru->user_id = $request->auth['user']['id'];
@@ -229,6 +270,14 @@ class SaldoController extends Controller
                         ->orderBy('created_at', 'desc')
                         ->first();
 
+                    $ht_tahun = HistorisTahunan::where('user_id', $request->auth['user']['id'])
+                        ->where('tahun', $tahun)
+                        ->first();
+
+                    $ht_bulan = HistorisBulanan::where('user_id', $request->auth['user']['id'])
+                        ->where('bulan', $bulan)
+                        ->first();
+
                     $portofolio = Portofolio::where('user_id', $request->auth['user']['id'])
                         ->where('aset_id', 1)
                         ->orderBy('created_at', 'desc')
@@ -263,6 +312,21 @@ class SaldoController extends Controller
                         $kinerja_baru->yield = ($mutasi_baru->harga_unit_saat_ini - $mutasi->harga_unit) / $mutasi->harga_unit;
                         $kinerja_baru->save();
 
+                        $ht_tahun->yield = $kinerja_baru->yield;
+                        $ht_tahun->save();
+
+                        if ($ht_bulan) {
+                            $ht_bulan->yield = $kinerja_baru->yield;
+                            $ht_bulan->save();
+                        } else {
+                            $ht_bulan_baru = new HistorisBulanan();
+                            $ht_bulan_baru->user_id = $request->auth['user']['id'];
+                            $ht_bulan_baru->historis_tahunan_id = $ht_tahun->id;
+                            $ht_bulan_baru->bulan = $bulan;
+                            $ht_bulan_baru->yield = $kinerja_baru->yield;
+                            $ht_bulan_baru->save();
+                        }
+
                         // masukkan portofolio untuk pertama kali               
                         $portofolio_baru = new Portofolio();
                         $portofolio_baru->user_id = $request->auth['user']['id'];
@@ -277,6 +341,10 @@ class SaldoController extends Controller
 
                         // START PINDAH DANA TAHUN BARU
 
+                        $mutasi_terakhir = MutasiDana::where('user_id', $request->auth['user']['id'])
+                            ->orderBy('created_at', 'desc')
+                            ->first();
+
                         // masukkan mutasi dana untuk pertama kali di tahun tersebut
                         $mutasi_tahun_baru = new MutasiDana();
                         $mutasi_tahun_baru->user_id = $request->auth['user']['id'];
@@ -284,25 +352,41 @@ class SaldoController extends Controller
                         $mutasi_tahun_baru->bulan = $bulan;
 
                         // menggunakan valuasi terakhir sebelum tahun tersebut
-                        $mutasi_tahun_baru->modal = $kinerja->valuasi_saat_ini;
+                        $mutasi_tahun_baru->modal = $kinerja->valuasi_saat_ini + (-$reqsaldo);
 
                         // mencari harga unit dan harga unit saat ini menggunakan valuasi dan jumalh unit penyertaan terakhir di tahun tersebut
-                        $mutasi_tahun_baru->harga_unit = ceil($kinerja->valuasi_saat_ini / $mutasi->jumlah_unit_penyertaan);
-                        $mutasi_tahun_baru_baru->harga_unit_saat_ini = ceil($kinerja->valuasi_saat_ini / $mutasi->jumlah_unit_penyertaan);
+                        $mutasi_tahun_baru->harga_unit = $mutasi_terakhir->harga_unit_saat_ini;
+
+                        $mutasi_tahun_baru->jumlah_unit_penyertaan = ceil(($kinerja->valuasi_saat_ini + (-$reqsaldo)) / $mutasi_terakhir->harga_unit_saat_ini);
+
+                        $mutasi_tahun_baru->harga_unit_saat_ini = ceil(($kinerja->valuasi_saat_ini + (-$reqsaldo)) / (ceil($kinerja->valuasi_saat_ini + $reqsaldo) / $mutasi_terakhir->harga_unit_saat_ini));
 
                         // mencari jumlah unit penyertaan dengan 
-                        $mutasi_tahun_baru_baru->jumlah_unit_penyertaan = $kinerja->valuasi_saat_ini / ($kinerja->valuasi_saat_ini / $mutasi->jumlah_unit_penyertaan);
 
-                        $mutasi_tahun_baru->alur_dana = $kinerja->valuasi_saat_ini;
+                        $mutasi_tahun_baru->alur_dana = -($reqsaldo);
                         $mutasi_tahun_baru->save();
 
                         // masukkan kinerja portofolio untuk pertama kali di tahun tersebut
                         $kinerja_tahun_baru = new KinerjaPortofolio();
                         $kinerja_tahun_baru->user_id = $request->auth['user']['id'];
                         $kinerja_tahun_baru->transaksi_id = $transaksi->id;
-                        $kinerja_tahun_baru->valuasi_saat_ini = $kinerja->valuasi_saat_ini;
+                        $kinerja_tahun_baru->valuasi_saat_ini = $kinerja->valuasi_saat_ini + (-$reqsaldo);
                         $kinerja_tahun_baru->yield = 0.00;
                         $kinerja_tahun_baru->save();
+
+                        // masukkan ke histori tahunan dan bulanan
+                        $ht_tahun_baru2 = new HistorisTahunan();
+                        $ht_tahun_baru2->user_id = $request->auth['user']['id'];
+                        $ht_tahun_baru2->tahun = $tahun;
+                        $ht_tahun_baru2->yield = $kinerja_tahun_baru->yield;
+                        $ht_tahun_baru2->save();
+                       
+                        $ht_bulan_baru2 = new HistorisBulanan();
+                        $ht_bulan_baru2->user_id = $request->auth['user']['id'];
+                        $ht_bulan_baru2->historis_tahunan_id = $ht_tahun_baru2->id;
+                        $ht_bulan_baru2->bulan = $bulan;
+                        $ht_bulan_baru2->yield = $kinerja_tahun_baru->yield;
+                        $ht_bulan_baru2->save();
 
                         // masukkan portofolio untuk pertama kali di tahun tersebut          
                         $portofolio_tahun_baru = new Portofolio();
@@ -367,6 +451,20 @@ class SaldoController extends Controller
                 $kinerja->valuasi_saat_ini = $reqsaldo;
                 $kinerja->yield = 0.00;
                 $kinerja->save();
+
+                // masukkan ke histori tahunan dan bulanan
+                $ht_tahun = new HistorisTahunan();
+                $ht_tahun->user_id = $request->auth['user']['id'];
+                $ht_tahun->tahun = $tahun;
+                $ht_tahun->yield = $kinerja->yield;
+                $ht_tahun->save();
+
+                $ht_bulan = new HistorisBulanan();
+                $ht_bulan->user_id = $request->auth['user']['id'];
+                $ht_bulan->historis_tahunan_id = $ht_tahun->id;
+                $ht_bulan->bulan = $bulan;
+                $ht_bulan->yield = $kinerja->yield;
+                $ht_bulan->save();
 
                 // masukkan portofolio untuk pertama kali               
                 $portofolio = new Portofolio();
