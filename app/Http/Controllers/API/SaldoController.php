@@ -87,7 +87,7 @@ class SaldoController extends Controller
                     $saldo->saldo = $reqsaldo;
                     $saldo->save();
 
-                    // catat di transaksi pertama kali
+                    // catat di transaksi pertama kali test
                     $transaksi = new Transaksi();
                     $transaksi->user_id = $userId;
                     $transaksi->aset_id = 1; // id 1 untuk kas
