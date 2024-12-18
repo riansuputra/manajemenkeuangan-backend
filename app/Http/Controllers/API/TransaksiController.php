@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\API;
 
 use Exception;
-use App\Models\Transaksi;
-use App\Models\Portofolio;
-use App\Models\Aset;
 use App\Models\Saldo;
+use App\Models\MutasiDana;
+use App\Models\KinerjaPortofolio;
+use App\Models\Portofolio;
+use App\Models\HistorisBulanan;
+use App\Models\HistorisTahunan;
+use App\Models\Transaksi;
+use App\Models\Aset;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -58,11 +62,147 @@ class TransaksiController extends Controller
                 'volume' => 'nullable',
                 'harga' => 'nullable',
                 'deskripsi' => 'nullable',
-                'cur_price' => 'nullable',
-                'avg_price' => 'nullable',
+                // 'cur_price' => 'nullable',
+                // 'avg_price' => 'nullable',
             ]);
 
-            $saldo = Saldo::where('user_id', $request->auth['user']['id'])->sum('saldo');
+            $tanggal = Carbon::parse($request->tanggal);
+
+            // ambil tahun dan bulan
+            $tahun = $tanggal->year;
+            $bulan = $tanggal->month;
+
+            $userId = $request->auth['user']['id'];
+            $totalHarga = $request->volume * $request->harga;
+            // Calculate total balance
+            $totalSaldo = Saldo::where('user_id', $userId)->sum('saldo');
+
+            $kinerja = KinerjaPortofolio::where('user_id', $request->auth['user']['id'])
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+
+            $mutasi = MutasiDana::where('user_id', $request->auth['user']['id'])
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+
+            $ht_tahun = HistorisTahunan::where('user_id', $request->auth['user']['id'])
+                ->where('tahun', $tahun)
+                ->first();
+
+            $ht_bulan = HistorisBulanan::where('user_id', $request->auth['user']['id'])
+                ->where('bulan', $bulan)
+                ->first();
+
+            $portofolio = Portofolio::where('user_id', $request->auth['user']['id'])
+                ->where('aset_id', $request->aset_id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            // untuk saham beli, deposit tabungan
+            if ($totalSaldo > 0 && $totalHarga <= $totalSaldo) {
+
+                $transaksi = new Transaksi();
+                $transaksi->user_id = $userId;
+                $transaksi->aset_id = $request->aset_id;
+                $transaksi->sekuritas_id = $request->sekuritas_id;
+                $transaksi->jenis_transaksi = $request->jenis_transaksi;
+                $transaksi->tanggal = $request->tanggal;
+                $transaksi->volume = $request->volume;
+                $transaksi->harga = $request->harga;
+                $transaksi->deskripsi = $request->deskripsi;
+                $transaksi->save();
+
+                if ($request->jenis_transaksi == 'beli') {
+
+                    // masukkan kinerja portofolio untuk pertama kali
+                    $kinerja_baru = new KinerjaPortofolio();
+                    $kinerja_baru->user_id = $userId;
+                    $kinerja_baru->transaksi_id = $transaksi->id;
+                    $kinerja_baru->valuasi_saat_ini = $kinerja->valuasi_saat_ini + $totalHarga;
+
+                    $harga_unit_saat_ini = ceil(($kinerja->valuasi_saat_ini + $totalHarga) / $mutasi->jumlah_unit_penyertaan);
+                    // dd($harga_unit_saat_ini, $mutasi->harga_unit, (($harga_unit_saat_ini - $mutasi->harga_unit) / $mutasi->harga_unit));
+
+                    $mutasi->harga_unit_saat_ini = $harga_unit_saat_ini;
+                    $mutasi->save();
+
+
+                    $kinerja_baru->yield = ($harga_unit_saat_ini - $mutasi->harga_unit) / $mutasi->harga_unit;
+                    $kinerja_baru->save();
+
+                    if ($ht_tahun) {
+                        $ht_tahun->yield = $kinerja_baru->yield;
+                        $ht_tahun->save();
+
+                        if ($ht_bulan) {
+                            $ht_bulan->yield = $kinerja_baru->yield;
+                            $ht_bulan->save();
+                        } else {
+                            $ht_bulan_baru = new HistorisBulanan();
+                            $ht_bulan_baru->user_id = $request->auth['user']['id'];
+                            $ht_bulan_baru->historis_tahunan_id = $ht_tahun->id;
+                            $ht_bulan_baru->bulan = $bulan;
+                            $ht_bulan_baru->yield = $kinerja_baru->yield;
+                            $ht_bulan_baru->save();
+                        }
+                    } else {
+                        $ht_tahun_baru = new HistorisTahunan();
+                        $ht_tahun_baru->user_id = $request->auth['user']['id'];
+                        $ht_tahun_baru->bulan = $bulan;
+                        $ht_tahun_baru->yield = $kinerja_baru->yield;
+                        $ht_tahun_baru->save();
+
+                        $ht_bulan_baru = new HistorisBulanan();
+                        $ht_bulan_baru->user_id = $request->auth['user']['id'];
+                        $ht_bulan_baru->historis_tahunan_id = $ht_tahun_baru->id;
+                        $ht_bulan_baru->bulan = $bulan;
+                        $ht_bulan_baru->yield = $kinerja_baru->yield;
+                        $ht_bulan_baru->save();
+                    }
+
+                    // jika sudah ada pembelian saham sebelumnya
+                    if ($portofolio) {
+                        $portofolio_baru = new Portofolio();
+                        $portofolio_baru->user_id = $userId;
+                        $portofolio_baru->aset_id = $request->aset_id; 
+                        $portofolio_baru->kinerja_portofolio_id = $kinerja_baru->id;
+                        $portofolio_baru->volume = $portofolio->volume + $request->volume; 
+                        $portofolio_baru->avg_price = ($portofolio->volume * $portofolio->cur_price) / ($request->volume * $request->harga); 
+                        $portofolio_baru->cur_price = $request->harga; 
+                        $portofolio_baru->save();
+
+                    // jika belum ada
+                    } else {
+                        $portofolio_baru = new Portofolio();
+                        $portofolio_baru->user_id = $userId;
+                        $portofolio_baru->aset_id = $request->aset_id; 
+                        $portofolio_baru->kinerja_portofolio_id = $kinerja_baru->id;
+                        $portofolio_baru->volume = $request->volume; 
+                        $portofolio_baru->avg_price = $request->harga; 
+                        $portofolio_baru->cur_price = $request->harga; 
+                        $portofolio_baru->save();
+
+                    }
+
+                    
+
+                } else if ($request->jenis_transaksi == 'deposit') {
+
+                }
+
+
+                return response()->json([
+                    'total_saldo' => $totalSaldo
+                ], Response::HTTP_OK);
+            } else if ($totalSaldo) {
+
+            } else {
+                return response()->json([
+                    'error' => 'Saldo user tidak ditemukan atau tidak mencukupi.'
+                ], Response::HTTP_NOT_FOUND);
+            }
+            
+
             if (!$saldo) {
                 return response()->json([
                     'error' => 'Saldo tidak ditemukan untuk user.'

@@ -24,9 +24,9 @@ class SaldoController extends Controller
             if($request->auth['user_type'] == 'user') {
                 $saldo = $saldo->where('user_id', $request->auth['user']['id']);
             }
-            $saldo = $saldo->sum('saldo');
+            $saldo = $saldo->get();
             return response()->json([
-                'message' => 'Berhasil mendapatkan saldo.',
+                'message' => 'Berhasil mendapatkan dana.',
                 'auth' => $request->auth,
                 'data' => [
                     'saldo' => $saldo
@@ -63,16 +63,17 @@ class SaldoController extends Controller
             $tahun = $tanggal->year;
             $bulan = $tanggal->month;
             $reqsaldo = (int) $request->saldo;
+            $userId = $request->auth['user']['id'];
 
             // ambil informasi saldo user untuk pertama kali
-            $cek_saldo = Saldo::where('user_id', $request->auth['user']['id'])
+            $cek_saldo = Saldo::where('user_id', $userId)
                 ->first();
 
             // jika user telah memiliki saldo
             if ($cek_saldo) {
 
                 // cek total saldo user
-                $total_saldo = Saldo::where('user_id', $request->auth['user']['id'])
+                $total_saldo = Saldo::where('user_id', $userId)
                     ->sum('saldo');
                 
                 // jika user telah memiliki saldo dan ada saldo masuk
@@ -80,7 +81,7 @@ class SaldoController extends Controller
 
                     // masukkan saldo masuk baru
                     $saldo = new Saldo();
-                    $saldo->user_id = $request->auth['user']['id'];
+                    $saldo->user_id = $userId;
                     $saldo->tanggal = $request->tanggal;
                     $saldo->tipe_saldo = $request->tipe_saldo;
                     $saldo->saldo = $reqsaldo;
@@ -88,7 +89,7 @@ class SaldoController extends Controller
 
                     // catat di transaksi pertama kali
                     $transaksi = new Transaksi();
-                    $transaksi->user_id = $request->auth['user']['id'];
+                    $transaksi->user_id = $userId;
                     $transaksi->aset_id = 1; // id 1 untuk kas
                     $transaksi->jenis_transaksi = 'kas'; // khusus untuk kas
                     $transaksi->tanggal = $request->tanggal;
@@ -97,25 +98,25 @@ class SaldoController extends Controller
                     $transaksi->save();
 
                     // ambil informasi mutasi dana terakhir di tahun tersebut 
-                    $mutasi = MutasiDana::where('user_id', $request->auth['user']['id'])
+                    $mutasi = MutasiDana::where('user_id', $userId)
                         ->where('tahun', $tahun)
                         ->orderBy('created_at', 'desc')
                         ->first();
 
                     // ambil informasi kinerja portofolio terakhir untuk memperoleh valuasi
-                    $kinerja = KinerjaPortofolio::where('user_id', $request->auth['user']['id'])
+                    $kinerja = KinerjaPortofolio::where('user_id', $userId)
                         ->orderBy('created_at', 'desc')
                         ->first();
 
-                    $ht_tahun = HistorisTahunan::where('user_id', $request->auth['user']['id'])
+                    $ht_tahun = HistorisTahunan::where('user_id', $userId)
                         ->where('tahun', $tahun)
                         ->first();
 
-                    $ht_bulan = HistorisBulanan::where('user_id', $request->auth['user']['id'])
+                    $ht_bulan = HistorisBulanan::where('user_id', $userId)
                         ->where('bulan', $bulan)
                         ->first();
 
-                    $portofolio = Portofolio::where('user_id', $request->auth['user']['id'])
+                    $portofolio = Portofolio::where('user_id', $userId)
                         ->where('aset_id', 1)
                         ->orderBy('created_at', 'desc')
                         ->first();
@@ -125,7 +126,7 @@ class SaldoController extends Controller
 
                         // tambah mutasi baru
                         $mutasi_baru = new MutasiDana();
-                        $mutasi_baru->user_id = $request->auth['user']['id'];
+                        $mutasi_baru->user_id = $userId;
                         $mutasi_baru->tahun = $tahun;
                         $mutasi_baru->bulan = $bulan;
                         $mutasi_baru->modal = $mutasi->modal; // menggunakan modal di tahun yang sama
@@ -142,7 +143,7 @@ class SaldoController extends Controller
 
                         // masukkan kinerja portofolio
                         $kinerja_baru = new KinerjaPortofolio();
-                        $kinerja_baru->user_id = $request->auth['user']['id'];
+                        $kinerja_baru->user_id = $userId;
                         $kinerja_baru->transaksi_id = $transaksi->id;
                             
                         $kinerja_baru->valuasi_saat_ini = $kinerja->valuasi_saat_ini + $reqsaldo;
@@ -158,7 +159,7 @@ class SaldoController extends Controller
                             $ht_bulan->save();
                         } else {
                             $ht_bulan_baru = new HistorisBulanan();
-                            $ht_bulan_baru->user_id = $request->auth['user']['id'];
+                            $ht_bulan_baru->user_id = $userId;
                             $ht_bulan_baru->historis_tahunan_id = $ht_tahun->id;
                             $ht_bulan_baru->bulan = $bulan;
                             $ht_bulan_baru->yield = $kinerja_baru->yield;
@@ -167,7 +168,7 @@ class SaldoController extends Controller
 
                         // masukkan portofolio untuk pertama kali               
                         $portofolio_baru = new Portofolio();
-                        $portofolio_baru->user_id = $request->auth['user']['id'];
+                        $portofolio_baru->user_id = $userId;
                         $portofolio_baru->aset_id = 1; // karena kas
                         $portofolio_baru->kinerja_portofolio_id = $kinerja_baru->id;
                         $portofolio_baru->volume = 1; // karena kas
@@ -179,13 +180,13 @@ class SaldoController extends Controller
 
                         // START PINDAH DANA TAHUN BARU
 
-                        $mutasi_terakhir = MutasiDana::where('user_id', $request->auth['user']['id'])
+                        $mutasi_terakhir = MutasiDana::where('user_id', $userId)
                             ->orderBy('created_at', 'desc')
                             ->first();
 
                         // masukkan mutasi dana untuk pertama kali di tahun tersebut
                         $mutasi_tahun_baru = new MutasiDana();
-                        $mutasi_tahun_baru->user_id = $request->auth['user']['id'];
+                        $mutasi_tahun_baru->user_id = $userId;
                         $mutasi_tahun_baru->tahun = $tahun;
                         $mutasi_tahun_baru->bulan = $bulan;
 
@@ -205,7 +206,7 @@ class SaldoController extends Controller
 
                         // masukkan kinerja portofolio untuk pertama kali di tahun tersebut
                         $kinerja_tahun_baru = new KinerjaPortofolio();
-                        $kinerja_tahun_baru->user_id = $request->auth['user']['id'];
+                        $kinerja_tahun_baru->user_id = $userId;
                         $kinerja_tahun_baru->transaksi_id = $transaksi->id;
                         $kinerja_tahun_baru->valuasi_saat_ini = $kinerja->valuasi_saat_ini + $reqsaldo;
                         $kinerja_tahun_baru->yield = 0.00;
@@ -213,13 +214,13 @@ class SaldoController extends Controller
 
                         // masukkan ke histori tahunan dan bulanan
                         $ht_tahun_baru2 = new HistorisTahunan();
-                        $ht_tahun_baru2->user_id = $request->auth['user']['id'];
+                        $ht_tahun_baru2->user_id = $userId;
                         $ht_tahun_baru2->tahun = $tahun;
                         $ht_tahun_baru2->yield = $kinerja_tahun_baru->yield;
                         $ht_tahun_baru2->save();
                        
                         $ht_bulan_baru2 = new HistorisBulanan();
-                        $ht_bulan_baru2->user_id = $request->auth['user']['id'];
+                        $ht_bulan_baru2->user_id = $userId;
                         $ht_bulan_baru2->historis_tahunan_id = $ht_tahun_baru2->id;
                         $ht_bulan_baru2->bulan = $bulan;
                         $ht_bulan_baru2->yield = $kinerja_tahun_baru->yield;
@@ -228,7 +229,7 @@ class SaldoController extends Controller
 
                         // masukkan portofolio untuk pertama kali di tahun tersebut          
                         $portofolio_tahun_baru = new Portofolio();
-                        $portofolio_tahun_baru->user_id = $request->auth['user']['id'];
+                        $portofolio_tahun_baru->user_id = $userId;
                         $portofolio_tahun_baru->aset_id = 1; // karena kas
                         $portofolio_tahun_baru->kinerja_portofolio_id = $kinerja_tahun_baru->id;
                         $portofolio_tahun_baru->volume = 1; // karena kas
@@ -243,7 +244,7 @@ class SaldoController extends Controller
 
                     // masukkan saldo keluar baru
                     $saldo = new Saldo();
-                    $saldo->user_id = $request->auth['user']['id'];
+                    $saldo->user_id = $userId;
                     $saldo->tanggal = $request->tanggal;
                     $saldo->tipe_saldo = $request->tipe_saldo;
                     $saldo->saldo = -$reqsaldo;
@@ -251,7 +252,7 @@ class SaldoController extends Controller
 
                     // catat di transaksi pertama kali
                     $transaksi = new Transaksi();
-                    $transaksi->user_id = $request->auth['user']['id'];
+                    $transaksi->user_id = $userId;
                     $transaksi->aset_id = 1; // id 1 untuk kas
                     $transaksi->jenis_transaksi = 'kas'; // khusus untuk kas
                     $transaksi->tanggal = $request->tanggal;
@@ -260,25 +261,25 @@ class SaldoController extends Controller
                     $transaksi->save();
 
                     // ambil informasi mutasi dana terakhir di tahun tersebut 
-                    $mutasi = MutasiDana::where('user_id', $request->auth['user']['id'])
+                    $mutasi = MutasiDana::where('user_id', $userId)
                         ->where('tahun', $tahun)
                         ->orderBy('created_at', 'desc')
                         ->first();
 
                     // ambil informasi kinerja portofolio terakhir untuk memperoleh valuasi
-                    $kinerja = KinerjaPortofolio::where('user_id', $request->auth['user']['id'])
+                    $kinerja = KinerjaPortofolio::where('user_id', $userId)
                         ->orderBy('created_at', 'desc')
                         ->first();
 
-                    $ht_tahun = HistorisTahunan::where('user_id', $request->auth['user']['id'])
+                    $ht_tahun = HistorisTahunan::where('user_id', $userId)
                         ->where('tahun', $tahun)
                         ->first();
 
-                    $ht_bulan = HistorisBulanan::where('user_id', $request->auth['user']['id'])
+                    $ht_bulan = HistorisBulanan::where('user_id', $userId)
                         ->where('bulan', $bulan)
                         ->first();
 
-                    $portofolio = Portofolio::where('user_id', $request->auth['user']['id'])
+                    $portofolio = Portofolio::where('user_id', $userId)
                         ->where('aset_id', 1)
                         ->orderBy('created_at', 'desc')
                         ->first();
@@ -288,7 +289,7 @@ class SaldoController extends Controller
 
                         // tambah mutasi baru
                         $mutasi_baru = new MutasiDana();
-                        $mutasi_baru->user_id = $request->auth['user']['id'];
+                        $mutasi_baru->user_id = $userId;
                         $mutasi_baru->tahun = $tahun;
                         $mutasi_baru->bulan = $bulan;
                         $mutasi_baru->modal = $mutasi->modal; // menggunakan modal di tahun yang sama
@@ -305,7 +306,7 @@ class SaldoController extends Controller
 
                         // masukkan kinerja portofolio
                         $kinerja_baru = new KinerjaPortofolio();
-                        $kinerja_baru->user_id = $request->auth['user']['id'];
+                        $kinerja_baru->user_id = $userId;
                         $kinerja_baru->transaksi_id = $transaksi->id;
                             
                         $kinerja_baru->valuasi_saat_ini = $kinerja->valuasi_saat_ini + (-$reqsaldo);
@@ -320,7 +321,7 @@ class SaldoController extends Controller
                             $ht_bulan->save();
                         } else {
                             $ht_bulan_baru = new HistorisBulanan();
-                            $ht_bulan_baru->user_id = $request->auth['user']['id'];
+                            $ht_bulan_baru->user_id = $userId;
                             $ht_bulan_baru->historis_tahunan_id = $ht_tahun->id;
                             $ht_bulan_baru->bulan = $bulan;
                             $ht_bulan_baru->yield = $kinerja_baru->yield;
@@ -329,7 +330,7 @@ class SaldoController extends Controller
 
                         // masukkan portofolio untuk pertama kali               
                         $portofolio_baru = new Portofolio();
-                        $portofolio_baru->user_id = $request->auth['user']['id'];
+                        $portofolio_baru->user_id = $userId;
                         $portofolio_baru->aset_id = 1; // karena kas
                         $portofolio_baru->kinerja_portofolio_id = $kinerja_baru->id;
                         $portofolio_baru->volume = 1; // karena kas
@@ -341,13 +342,13 @@ class SaldoController extends Controller
 
                         // START PINDAH DANA TAHUN BARU
 
-                        $mutasi_terakhir = MutasiDana::where('user_id', $request->auth['user']['id'])
+                        $mutasi_terakhir = MutasiDana::where('user_id', $userId)
                             ->orderBy('created_at', 'desc')
                             ->first();
 
                         // masukkan mutasi dana untuk pertama kali di tahun tersebut
                         $mutasi_tahun_baru = new MutasiDana();
-                        $mutasi_tahun_baru->user_id = $request->auth['user']['id'];
+                        $mutasi_tahun_baru->user_id = $userId;
                         $mutasi_tahun_baru->tahun = $tahun;
                         $mutasi_tahun_baru->bulan = $bulan;
 
@@ -368,7 +369,7 @@ class SaldoController extends Controller
 
                         // masukkan kinerja portofolio untuk pertama kali di tahun tersebut
                         $kinerja_tahun_baru = new KinerjaPortofolio();
-                        $kinerja_tahun_baru->user_id = $request->auth['user']['id'];
+                        $kinerja_tahun_baru->user_id = $userId;
                         $kinerja_tahun_baru->transaksi_id = $transaksi->id;
                         $kinerja_tahun_baru->valuasi_saat_ini = $kinerja->valuasi_saat_ini + (-$reqsaldo);
                         $kinerja_tahun_baru->yield = 0.00;
@@ -376,13 +377,13 @@ class SaldoController extends Controller
 
                         // masukkan ke histori tahunan dan bulanan
                         $ht_tahun_baru2 = new HistorisTahunan();
-                        $ht_tahun_baru2->user_id = $request->auth['user']['id'];
+                        $ht_tahun_baru2->user_id = $userId;
                         $ht_tahun_baru2->tahun = $tahun;
                         $ht_tahun_baru2->yield = $kinerja_tahun_baru->yield;
                         $ht_tahun_baru2->save();
                        
                         $ht_bulan_baru2 = new HistorisBulanan();
-                        $ht_bulan_baru2->user_id = $request->auth['user']['id'];
+                        $ht_bulan_baru2->user_id = $userId;
                         $ht_bulan_baru2->historis_tahunan_id = $ht_tahun_baru2->id;
                         $ht_bulan_baru2->bulan = $bulan;
                         $ht_bulan_baru2->yield = $kinerja_tahun_baru->yield;
@@ -390,7 +391,7 @@ class SaldoController extends Controller
 
                         // masukkan portofolio untuk pertama kali di tahun tersebut          
                         $portofolio_tahun_baru = new Portofolio();
-                        $portofolio_tahun_baru->user_id = $request->auth['user']['id'];
+                        $portofolio_tahun_baru->user_id = $userId;
                         $portofolio_tahun_baru->aset_id = 1; // karena kas
                         $portofolio_tahun_baru->kinerja_portofolio_id = $kinerja_tahun_baru->id;
                         $portofolio_tahun_baru->volume = 1; // karena kas
@@ -403,7 +404,7 @@ class SaldoController extends Controller
                 // jika tipe saldo keluar dan jumlah saldo keluar lebih sedikit dari total saldo yang ada
                 } else if ($request->tipe_saldo == 'keluar' && $request->saldo > $total_saldo) {
                     return response()->json([
-                        'message' => 'Saldo tidak cukup.'
+                        'message' => 'Dana tidak cukup.'
                     ], Response::HTTP_BAD_REQUEST);
 
                 // jika tipe saldo adalah dividen
@@ -416,7 +417,7 @@ class SaldoController extends Controller
 
                 // masukkan saldo untuk pertama kali
                 $saldo = new Saldo();
-                $saldo->user_id = $request->auth['user']['id'];
+                $saldo->user_id = $userId;
                 $saldo->tanggal = $request->tanggal;
                 $saldo->tipe_saldo = $request->tipe_saldo;
                 $saldo->saldo = $reqsaldo;
@@ -424,7 +425,7 @@ class SaldoController extends Controller
 
                 // catat di transaksi pertama kali
                 $transaksi = new Transaksi();
-                $transaksi->user_id = $request->auth['user']['id'];
+                $transaksi->user_id = $userId;
                 $transaksi->aset_id = 1; // id 1 untuk kas
                 $transaksi->jenis_transaksi = 'kas'; // khusus untuk kas
                 $transaksi->tanggal = $request->tanggal;
@@ -434,7 +435,7 @@ class SaldoController extends Controller
 
                 // masukkan mutasi dana untuk pertama kali
                 $mutasi = new MutasiDana();
-                $mutasi->user_id = $request->auth['user']['id'];
+                $mutasi->user_id = $userId;
                 $mutasi->tahun = $tahun;
                 $mutasi->bulan = $bulan;
                 $mutasi->modal = $reqsaldo;
@@ -446,7 +447,7 @@ class SaldoController extends Controller
 
                 // masukkan kinerja portofolio untuk pertama kali
                 $kinerja = new KinerjaPortofolio();
-                $kinerja->user_id = $request->auth['user']['id'];
+                $kinerja->user_id = $userId;
                 $kinerja->transaksi_id = $transaksi->id;
                 $kinerja->valuasi_saat_ini = $reqsaldo;
                 $kinerja->yield = 0.00;
@@ -454,13 +455,13 @@ class SaldoController extends Controller
 
                 // masukkan ke histori tahunan dan bulanan
                 $ht_tahun = new HistorisTahunan();
-                $ht_tahun->user_id = $request->auth['user']['id'];
+                $ht_tahun->user_id = $userId;
                 $ht_tahun->tahun = $tahun;
                 $ht_tahun->yield = $kinerja->yield;
                 $ht_tahun->save();
 
                 $ht_bulan = new HistorisBulanan();
-                $ht_bulan->user_id = $request->auth['user']['id'];
+                $ht_bulan->user_id = $userId;
                 $ht_bulan->historis_tahunan_id = $ht_tahun->id;
                 $ht_bulan->bulan = $bulan;
                 $ht_bulan->yield = $kinerja->yield;
@@ -468,7 +469,7 @@ class SaldoController extends Controller
 
                 // masukkan portofolio untuk pertama kali               
                 $portofolio = new Portofolio();
-                $portofolio->user_id = $request->auth['user']['id'];
+                $portofolio->user_id = $userId;
                 $portofolio->aset_id = 1; // karena kas
                 $portofolio->kinerja_portofolio_id = $kinerja->id;
                 $portofolio->volume = 1; // karena kas
@@ -482,12 +483,12 @@ class SaldoController extends Controller
             // jika belum terdapat saldo dan tipe saldo keluar
             } else if ($request->tipe_saldo == 'keluar') {
                 return response()->json([
-                    'message' => 'Tidak dapat melakukan penarikan karena belum terdapat saldo.'
+                    'message' => 'Tidak dapat melakukan penarikan karena belum terdapat dana.'
                 ], Response::HTTP_BAD_REQUEST);
             }
                 
             return response()->json([
-                'message' => 'Berhasil menambah saldo.',
+                'message' => 'Berhasil kelola dana.',
                 'auth' => $request->auth,
                 'data' => [
                     'saldo' => $saldo,
@@ -522,7 +523,7 @@ class SaldoController extends Controller
             }
             $saldo = $saldo->findOrFail($id);
             return response()->json([
-                'message' => 'Berhasil mendapatkan detail saldo.',
+                'message' => 'Berhasil mendapatkan detail dana.',
                 'auth' => $request->auth,
                 'data' => [
                     'saldo' => $saldo
@@ -562,7 +563,7 @@ class SaldoController extends Controller
             $saldo->saldo = $request->saldo;
             $saldo->save();
             return response()->json([
-                'message' => 'Berhasil mengubah saldo.',
+                'message' => 'Berhasil mengubah dana.',
                 'auth' => $request->auth,
                 'data' => [
                     'saldo' => $saldo
@@ -591,7 +592,7 @@ class SaldoController extends Controller
             $saldo = $saldo->where('user_id', $request->auth['user']['id'])
                                    ->delete();
             return response()->json([
-                'message' => 'Berhasil menghapus saldo.',
+                'message' => 'Berhasil menghapus dana.',
                 'auth' => $request->auth,
                 'data' => [
                     'saldo' => $saldo

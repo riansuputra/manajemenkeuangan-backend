@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('historis_tahunan', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('user');
-            $table->year('tahun')->unique();
+            $table->year('tahun');
             $table->decimal('yield', 10, 2)->nullable();
             $table->decimal('ihsg', 10, 2)->nullable();
             $table->decimal('lq45', 10, 2)->nullable();

@@ -23,6 +23,7 @@ use App\Http\Controllers\API\BeliSahamController;
 use App\Http\Controllers\API\JualSahamController;
 use App\Http\Controllers\API\SekuritasController;
 use App\Http\Controllers\API\PemasukanController;
+use App\Http\Controllers\API\MutasiDanaController;
 use App\Http\Controllers\API\PortofolioController;
 use App\Http\Controllers\API\PengeluaranController;
 use App\Http\Controllers\API\PortofolioBeliController;
@@ -67,7 +68,7 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::apiResource('historis', HistorisController::class);
         
         Route::apiResource('saldo', SaldoController::class);
-        Route::get('/mutasi-dana', [SaldoController::class, 'mutasiDana']);
+        Route::get('/mutasi-dana', [MutasiDanaController::class, 'index']);
 
         Route::apiResource('aset', AsetController::class);
         Route::post('/aset/store-kas', [AsetController::class, 'storeKas']);
