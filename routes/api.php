@@ -77,6 +77,8 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::post('/aset/store-lainnya', [AsetController::class, 'storeLainnya']);
         Route::post('/aset/store-saham', [AsetController::class, 'storeSaham']);
 
+        Route::get('/berita/store', [BeritaController::class, 'store']);
+        Route::get('/berita', [BeritaController::class, 'index']);
 
         Route::get('/saham', [SahamController::class, 'index']);
         Route::get('/saham/update', [SahamController::class, 'update']);
@@ -125,8 +127,7 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
 });
 // Route::get('/porto', [ManajemenPortofolioController::class, 'indexporto']);
 // Route::get('/dividen', [StockAPIController::class, 'indexdividen']);
-Route::get('/berita/store', [BeritaController::class, 'store']);
-Route::get('/berita', [BeritaController::class, 'index']);
+
 // Route::get('/ihsg', [StockAPIController::class, 'ihsg']);
 
 // Route::get('/stock/{$emiten}', [StockAPIController::class, 'stock']); // Harga

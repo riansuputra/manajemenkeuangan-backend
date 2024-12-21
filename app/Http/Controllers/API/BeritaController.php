@@ -12,51 +12,61 @@ use Illuminate\Http\Request;
 
 class BeritaController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function store()
-{
-    $response = Http::acceptJson()
-        ->withHeaders([
-            'X-API-KEY' => config('goapi.apikey')
-        ])->withoutVerifying()->get('https://api.goapi.io/stock/idx/news?page=5')->json();
+    {
+        try{
 
-    $data = $response['data']['results'];
+            $response = Http::acceptJson()
+                ->withHeaders([
+                    'X-API-KEY' => config('goapi.apikey')
+                ])->withoutVerifying()->get('https://api.goapi.io/stock/idx/news?page=5')->json();
 
-    foreach ($data as $item) {
-        Berita::updateOrCreate(
-            [
-                'judul' => $item['title'],
-                'tanggal_terbit' => $item['published_at'],
-                'link' => $item['url']
-            ],
-            [
-                'gambar' => $item['image'],
-                'deskripsi' => $item['description'],
-                'nama_penerbit' => $item['publisher']['name'],
-                'logo_penerbit' => $item['publisher']['logo'],
-            ]
-        );
+            $data = $response['data']['results'];
+
+            foreach ($data as $item) {
+                Berita::updateOrCreate(
+                    [
+                        'judul' => $item['title'],
+                        'tanggal_terbit' => $item['published_at'],
+                        'link' => $item['url']
+                    ],
+                    [
+                        'gambar' => $item['image'],
+                        'deskripsi' => $item['description'],
+                        'nama_penerbit' => $item['publisher']['name'],
+                        'logo_penerbit' => $item['publisher']['logo'],
+                    ]
+                );
+            }
+
+            $paginatedRecords = Berita::paginate(10);
+            return response()->json($paginatedRecords);
+            return response()->json([
+                'message' => 'Berhasil update data kurs.',
+                'auth' => $request->auth,
+                'berita' => $paginatedRecords,
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
-    $paginatedRecords = Berita::paginate(10);
-
-    return response()->json($paginatedRecords);
-}
-
-
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         //
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function index(Request $request)
     {
         try {
@@ -111,33 +121,20 @@ class BeritaController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Berita $berita)
     {
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Berita $berita)
     {
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update() {
     
     }
 
-
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Berita $berita)
     {
         //
