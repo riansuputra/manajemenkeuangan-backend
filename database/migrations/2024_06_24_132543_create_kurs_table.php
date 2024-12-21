@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('kurs', function (Blueprint $table) {
             $table->id();
             $table->string('mata_uang');
+            $table->string('rate_idr');
             $table->string('nilai_tukar');
             $table->timestamps();
         });

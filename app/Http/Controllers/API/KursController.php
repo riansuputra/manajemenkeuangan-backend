@@ -75,18 +75,16 @@ class KursController extends Controller
                 $idrEquivalent = ceil(1 / $rate);
                 $convertedData[$currency] = [
                     'name' => $currencyNames[$currency],
-                    'value' => "Rp. " . number_format($idrEquivalent, 0, ',', '.') // Format IDR with Rp. prefix and thousand separators
+                    'rate' => $rate,
+                    'value' => "Rp. " . number_format($idrEquivalent, 0, ',', '.') 
                 ];
             }
             foreach ($convertedData as $currency => $currencyData) {
-                // Ambil data lama dari tabel
                 $existingKurs = Kurs::where('mata_uang', $currencyData['name'])->first();
             
-                // Periksa apakah data lama ada
                 $oldValue = $existingKurs ? (int)filter_var($existingKurs->nilai_tukar, FILTER_SANITIZE_NUMBER_INT) : null;
                 $newValue = (int)filter_var($currencyData['value'], FILTER_SANITIZE_NUMBER_INT);
             
-                // Bandingkan nilai lama dan baru
                 $differenceSymbol = '';
                 if (!is_null($oldValue)) {
                     if ($newValue > $oldValue) {
@@ -96,16 +94,15 @@ class KursController extends Controller
                     }
                 }
             
-                // Tambahkan simbol ke nilai tukar baru
                 $currencyData['value'] = $differenceSymbol . $currencyData['value'];
             
-                // Update atau buat data baru
                 Kurs::updateOrCreate(
                     [
-                        'mata_uang' => $currencyData['name'], // Cari berdasarkan nama mata uang
+                        'mata_uang' => $currencyData['name'], 
                     ],
                     [
-                        'nilai_tukar' => $currencyData['value'], // Perbarui nilai tukar
+                        'rate_idr' => $currencyData['rate'], 
+                        'nilai_tukar' => $currencyData['value'], 
                     ]
                 );
             }
