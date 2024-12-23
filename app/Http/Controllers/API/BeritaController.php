@@ -15,7 +15,6 @@ class BeritaController extends Controller
     public function store()
     {
         try{
-
             $response = Http::acceptJson()
                 ->withHeaders([
                     'X-API-KEY' => config('goapi.apikey')

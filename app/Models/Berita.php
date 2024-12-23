@@ -11,5 +11,4 @@ class Berita extends Model
 
     protected $table = 'berita';
     protected $guarded = [];
-    protected $hidden = ['created_at', 'updated_at'];
 }
