@@ -8,8 +8,7 @@ use App\Models\Saldo;
 use App\Models\MutasiDana;
 use App\Models\KinerjaPortofolio;
 use App\Models\Portofolio;
-use App\Models\HistorisBulanan;
-use App\Models\HistorisTahunan;
+use App\Models\Historis;
 use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -20,11 +19,8 @@ class SaldoController extends Controller
 {
     public function index(Request $request) {
         try {
-            $saldo = new Saldo();
-            if($request->auth['user_type'] == 'user') {
-                $saldo = $saldo->where('user_id', $request->auth['user']['id']);
-            }
-            $saldo = $saldo->get();
+            $saldo = Saldo::where('user_id', $request->auth['user']['id'])
+                                ->get();
             return response()->json([
                 'message' => 'Berhasil mendapatkan dana.',
                 'auth' => $request->auth,
@@ -108,19 +104,16 @@ class SaldoController extends Controller
                         ->orderBy('created_at', 'desc')
                         ->first();
 
-                    $ht_tahun = HistorisTahunan::where('user_id', $userId)
-                        ->where('tahun', $tahun)
-                        ->first();
-
-                    $ht_bulan = HistorisBulanan::where('user_id', $userId)
-                        ->where('bulan', $bulan)
-                        ->first();
-
+                        
                     $portofolio = Portofolio::where('user_id', $userId)
                         ->where('aset_id', 1)
                         ->orderBy('created_at', 'desc')
                         ->first();
-
+                        
+                    $histori = Historis::where('user_id', $userId)
+                        ->where('tahun', $tahun)
+                        ->first();
+                        
                     // jika sudah terdapat mutasi
                     if ($mutasi) {
 

@@ -62,7 +62,7 @@ class HistorisController extends Controller
             $ihsgStart = $request->ihsg_start;
             $ihsgEnd = $request->ihsg_end;
 
-            // Cek data eksisting
+            // Cek data eksisting untuk bulan yang dipilih
             $historis = Historis::where('user_id', $userId)
                 ->where('bulan', $bulan)
                 ->where('tahun', $tahun)
@@ -72,6 +72,11 @@ class HistorisController extends Controller
                 // Perbarui ihsg_start hanya jika diberikan input baru
                 if ($ihsgStart !== null) {
                     $historis->ihsg_start = $ihsgStart;
+
+                    // Perbarui semua ihsg_start di tahun yang sama
+                    Historis::where('user_id', $userId)
+                        ->where('tahun', $tahun)
+                        ->update(['ihsg_start' => $ihsgStart]);
                 }
 
                 // Perbarui ihsg_end hanya jika diberikan input baru
@@ -86,6 +91,13 @@ class HistorisController extends Controller
                 $historis->tahun = $tahun;
                 $historis->ihsg_start = $ihsgStart;
                 $historis->ihsg_end = $ihsgEnd;
+
+                // Perbarui semua ihsg_start di tahun yang sama jika ihsg_start diberikan
+                if ($ihsgStart !== null) {
+                    Historis::where('user_id', $userId)
+                        ->where('tahun', $tahun)
+                        ->update(['ihsg_start' => $ihsgStart]);
+                }
             }
 
             // Hitung yield_ihsg jika kedua nilai tersedia
