@@ -71,4 +71,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Catatan::class, 'user_id', 'id');
     }
+    public function historis()
+    {
+        return $this->hasMany(Historis::class, 'user_id', 'id');
+    }
+    
 }

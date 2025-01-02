@@ -28,7 +28,7 @@ Class PortofolioController extends Controller
             if($request->auth['user_type'] == 'user') {
                 $portofolio = $portofolio->where('user_id', $request->auth['user']['id']);
             }
-            $portofolio = $portofolio->with('saham')
+            $portofolio = $portofolio->with('kinerja_portofolio.transaksi', 'aset')
                                      ->get();
             return response()->json([
                 'message' => 'Berhasil mendapatkan data pembelian saham.',
