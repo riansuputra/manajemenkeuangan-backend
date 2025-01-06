@@ -14,11 +14,151 @@ use App\Models\Aset;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;
 
 class TransaksiController extends Controller
 {
+    public function store(Request $request)
+    {
+        try {
+            $userId = $request->auth['user']['id'];
+            $tanggal = $request->input('tanggal');
+            $volume = $request->input('volume');
+            $harga = $request->input('harga');
+            $totalHarga = $volume * $harga;
+            $asetId = $request->input('aset_id');
+
+            // Cek saldo user
+            $saldoUser = Saldo::where('user_id', $userId)->sum('saldo');
+            if ($totalHarga > $saldoUser) {
+                return response()->json(['error' => 'Saldo tidak mencukupi'], 400);
+            }
+
+            // Kurangi saldo user
+            $saldo = Saldo::create([
+                'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'saldo' => -$totalHarga,
+                'tipe_saldo' => 'keluar',
+            ]);
+
+            // Tambahan untuk aset kas (aset_id = 1)
+            // Ambil kinerja_portofolio terakhir
+            $kinerjaPortofolioTerakhir = KinerjaPortofolio::where('user_id', $userId)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $transaksiKas = Transaksi::create([
+                'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'jenis_transaksi' => 'kas',
+                'volume' => 1,
+                'harga' => -$totalHarga,
+                'aset_id' => 1, // Aset kas
+                'deskripsi' => 'Berkurang beli aset', 
+            ]);
+
+            $kinerjaPortofolioKas = KinerjaPortofolio::create([
+                'user_id' => $userId,
+                'transaksi_id' => $transaksiKas->id,
+                'valuasi_saat_ini' => ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) - $totalHarga,
+                'yield' => $kinerjaPortofolioTerakhir->yield ?? 0.0,
+            ]);
+
+            Portofolio::create([
+                'user_id' => $userId,
+                'aset_id' => 1, // Aset kas
+                'volume' => 1,
+                'avg_price' => null, // Kosongkan
+                'cur_price' => $kinerjaPortofolioKas->valuasi_saat_ini - $totalHarga,
+                'kinerja_portofolio_id' => $kinerjaPortofolioKas->id,
+            ]);
+
+            // Buat transaksi baru
+            $transaksi = Transaksi::create([
+                'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'jenis_transaksi' => 'beli',
+                'volume' => $volume,
+                'harga' => $harga,
+                'aset_id' => $asetId,
+                'deskripsi' => 'Beli Aset '.$asetId,
+            ]);
+
+            // Tambahkan data ke kinerja_portofolio
+            $kinerjaPortofolio = KinerjaPortofolio::create([
+                'user_id' => $userId,
+                'transaksi_id' => $transaksi->id,
+                'valuasi_saat_ini' => ($kinerjaPortofolioKas->valuasi_saat_ini ?? 0) + $totalHarga,
+                'yield' => $kinerjaPortofolioKas->yield ?? 0.0,
+            ]);
+
+            // Cek apakah aset sudah ada di portofolio user
+            $portofolio = Portofolio::where('user_id', $userId)
+                ->where('aset_id', $asetId)
+                ->first();
+
+            if ($portofolio) {
+                // Jika aset sudah ada di portofolio
+                $volumeBaru = $portofolio->volume + $volume;
+                $totalHargaSebelumnya = $portofolio->avg_price * $portofolio->volume;
+                $avgPriceBaru = ($totalHargaSebelumnya + $totalHarga) / $volumeBaru;
+
+                Portofolio::create([
+                    'user_id' => $userId,
+                    'aset_id' => $asetId,
+                    'volume' => $volumeBaru,
+                    'avg_price' => $avgPriceBaru,
+                    'cur_price' => $harga,
+                    'kinerja_portofolio_id' => $kinerjaPortofolio->id,
+                ]);
+            } else {
+                // Jika aset belum ada di portofolio
+                Portofolio::create([
+                    'user_id' => $userId,
+                    'aset_id' => $asetId,
+                    'volume' => $volume,
+                    'avg_price' => $harga,
+                    'cur_price' => $harga,
+                    'kinerja_portofolio_id' => $kinerjaPortofolio->id,
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Berhasil mendapatkan transaksi.',
+                'auth' => $request->auth,
+                'data' => [
+                    'transaksi' => $transaksi,
+                    'saldo' => $saldo,
+                    'portofolio' => Portofolio::where('user_id', $userId)
+                        ->latest()
+                        ->get(),
+                    'kinerja_portofolio' => $kinerjaPortofolio,
+                ],
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' => $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
+
+    
+
+
     public function index(Request $request) 
     {
         try {
@@ -51,7 +191,7 @@ class TransaksiController extends Controller
         }
     }
 
-    public function store(Request $request)
+    public function store1(Request $request)
     {
         try{
             $request->validate([

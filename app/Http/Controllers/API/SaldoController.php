@@ -17,6 +17,551 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SaldoController extends Controller
 {
+    public function topUp(Request $request)
+    {
+        $userId = $request->auth['user']['id'];
+        $jumlahSaldo = $request->input('saldo');
+        $tipeSaldo = $request->input('tipe_saldo');
+        $tanggal = $request->input('tanggal');
+        
+
+        if ($tipeSaldo === 'masuk') {
+            return $this->handleSaldoMasuk($userId, $jumlahSaldo, $tanggal);
+        } elseif ($tipeSaldo === 'keluar') {
+            return $this->handleSaldoKeluar($userId, $jumlahSaldo, $tanggal);
+        }
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Tipe saldo tidak valid.',
+        ], 400);
+    }
+
+    private function handleSaldoMasuk($userId, $jumlahSaldo, $tanggal)
+    {
+        $tahun = date('Y', strtotime($tanggal));
+        $bulan = date('n', strtotime($tanggal));
+        // Tambahkan data ke Transaksi
+        $transaksiBaru = Transaksi::create([
+            'user_id' => $userId,
+            'aset_id' => 1, // ID aset untuk "kas"
+            'jenis_transaksi' => 'kas',
+            'tanggal' => $tanggal,
+            'volume' => 1,
+            'harga' => $jumlahSaldo,
+            'deskripsi' => 'Top-up saldo',
+        ]);
+
+        // Data pendukung
+        $mutasiDanaTerakhir = MutasiDana::where('user_id', $userId)
+            ->orderByDesc('id')
+            ->first();
+
+        $kinerjaPortofolioTerakhir = KinerjaPortofolio::where('user_id', $userId)
+            ->orderByDesc('id')
+            ->first();
+
+        $portofolioTerakhir = Portofolio::where('user_id', $userId)
+            ->where('aset_id', 1) // ID aset untuk "kas"
+            ->orderByDesc('id')
+            ->first();
+
+        $historisTerkait = Historis::where('user_id', $userId)
+            ->where('tahun', $tahun)
+            ->where('bulan', $bulan)
+            ->first();
+
+        // Jika belum ada data mutasi dana untuk tahun ini
+        if (!$mutasiDanaTerakhir || $mutasiDanaTerakhir->tahun < $tahun) {
+            $modalBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
+            $hargaUnitLama = $mutasiDanaTerakhir->harga_unit_saat_ini ?? 1000;
+
+            $jumlahUnitPenyertaanBaru = ceil(
+                $modalBaru / $hargaUnitLama
+            );
+
+            $hargaUnitSaatIni = ceil(
+                $modalBaru / $jumlahUnitPenyertaanBaru
+            );
+
+            $mutasiDanaBaru = MutasiDana::create([
+                'user_id' => $userId,
+                'tahun' => $tahun,
+                'bulan' => $bulan,
+                'modal' => $modalBaru,
+                'harga_unit' => $hargaUnitSaatIni,
+                'harga_unit_saat_ini' => $hargaUnitSaatIni,
+                'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
+                'alur_dana' => $jumlahSaldo,
+            ]);
+
+            // Tambahkan data ke Kinerja Portofolio
+            $valuasiSaatIniBaru = $modalBaru;
+            $kinerjaPortofolioBaru = KinerjaPortofolio::create([
+                'user_id' => $userId,
+                'transaksi_id' => $transaksiBaru->id, // ID transaksi akan diisi setelah transaksi dibuat
+                'valuasi_saat_ini' => $valuasiSaatIniBaru,
+                'yield' => 0.00,
+            ]);
+
+            // Tambahkan data ke Historis
+            if (!$historisTerkait) {
+                Historis::create([
+                    'user_id' => $userId,
+                    'tahun' => $tahun,
+                    'bulan' => $bulan,
+                    'yield' => 0.00,
+                ]);
+            } else {
+                $historisTerkait->update([
+                    'yield' => 0.00,
+                ]);
+            }
+
+            // Tambahkan data ke Portofolio
+            Portofolio::create([
+                'user_id' => $userId,
+                'aset_id' => 1, // ID aset untuk "kas"
+                'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
+                'volume' => 1,
+                'cur_price' => $valuasiSaatIniBaru,
+            ]);
+
+        } else {
+            // Jika sudah ada data mutasi dana untuk tahun ini
+            $modalLama = $mutasiDanaTerakhir->modal;
+            $hargaUnitSaatIni = ceil(
+                ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / ($mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0)
+            );
+            $hargaUnit = $mutasiDanaTerakhir->harga_unit;
+
+            $jumlahUnitPenyertaanBaru = ($jumlahSaldo / $hargaUnitSaatIni) + $mutasiDanaTerakhir->jumlah_unit_penyertaan;
+
+            $mutasiDanaBaru = MutasiDana::create([
+                'user_id' => $userId,
+                'tahun' => $tahun,
+                'bulan' => $bulan,
+                'modal' => $modalLama,
+                'harga_unit' => $hargaUnit,
+                'harga_unit_saat_ini' => $hargaUnitSaatIni,
+                'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
+                'alur_dana' => $jumlahSaldo,
+            ]);
+
+            // Tambahkan data ke Kinerja Portofolio
+            $valuasiSaatIniBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
+            $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+
+            $kinerjaPortofolioBaru = KinerjaPortofolio::create([
+                'user_id' => $userId,
+                'transaksi_id' => $transaksiBaru->id, // ID transaksi akan ditambahkan di bawah
+                'valuasi_saat_ini' => $valuasiSaatIniBaru,
+                'yield' => $yield,
+            ]);
+
+            // Update atau tambahkan data ke Historis
+            if ($historisTerkait) {
+                $historisTerkait->update([
+                    'yield' => $yield,
+                ]);
+            } else {
+                Historis::create([
+                    'user_id' => $userId,
+                    'tahun' => $tahun,
+                    'bulan' => $bulan,
+                    'yield' => $yield,
+                ]);
+            }
+
+            // Tambahkan data ke Portofolio
+            $curPriceBaru = ($portofolioTerakhir->cur_price ?? 0) + $jumlahSaldo;
+
+            Portofolio::create([
+                'user_id' => $userId,
+                'aset_id' => 1, // ID aset untuk "kas"
+                'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
+                'volume' => 1,
+                'cur_price' => $curPriceBaru,
+            ]);
+        }
+
+        // Tambahkan data ke Saldo
+        $saldoBaru = Saldo::create([
+            'user_id' => $userId,
+            'tanggal' => $tanggal,
+            'tipe_saldo' => 'masuk',
+            'saldo' => $jumlahSaldo,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Top-up saldo berhasil diproses.',
+            'data' => [
+                'saldo' => $saldoBaru,
+                'transaksi' => $transaksiBaru,
+                'mutasi_dana' => $mutasiDanaBaru ?? null,
+                'kinerja_portofolio' => $kinerjaPortofolioBaru ?? null,
+            ],
+        ]);
+    }
+
+    private function handleSaldoKeluar($userId, $jumlahSaldo, $tanggal)
+    {
+        $tahun = date('Y', strtotime($tanggal));
+        $bulan = date('n', strtotime($tanggal));
+        // Validasi saldo cukup
+        $totalSaldo = Saldo::where('user_id', $userId)->sum('saldo');
+        if ($jumlahSaldo > $totalSaldo) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Saldo tidak mencukupi.',
+            ], 400);
+        }
+
+        $jumlahSaldo = -abs($jumlahSaldo);
+
+        // Tambahkan data ke Transaksi
+        $transaksiBaru = Transaksi::create([
+            'user_id' => $userId,
+            'aset_id' => 1, // ID aset untuk "kas"
+            'jenis_transaksi' => 'kas',
+            'tanggal' => $tanggal,
+            'volume' => 1,
+            'harga' => $jumlahSaldo,
+            'deskripsi' => 'Withdraw saldo',
+        ]);
+
+        // Data pendukung
+        $mutasiDanaTerakhir = MutasiDana::where('user_id', $userId)
+            ->orderByDesc('id')
+            ->first();
+
+        $kinerjaPortofolioTerakhir = KinerjaPortofolio::where('user_id', $userId)
+            ->orderByDesc('id')
+            ->first();
+
+        $portofolioTerakhir = Portofolio::where('user_id', $userId)
+            ->where('aset_id', 1) // ID aset untuk "kas"
+            ->orderByDesc('id')
+            ->first();
+
+        $historisTerkait = Historis::where('user_id', $userId)
+            ->where('tahun', $tahun)
+            ->where('bulan', $bulan)
+            ->first();
+
+        // Jika belum ada data mutasi dana untuk tahun ini
+        if (!$mutasiDanaTerakhir || $mutasiDanaTerakhir->tahun < $tahun) {
+            $modalBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
+            $hargaUnitLama = $mutasiDanaTerakhir->harga_unit_saat_ini ?? 1000;
+
+            $jumlahUnitPenyertaanBaru = ceil(
+                $modalBaru / $hargaUnitLama
+            );
+
+            $hargaUnitSaatIni = ceil(
+                $modalBaru / $jumlahUnitPenyertaanBaru
+            );
+
+            $mutasiDanaBaru = MutasiDana::create([
+                'user_id' => $userId,
+                'tahun' => $tahun,
+                'bulan' => $bulan,
+                'modal' => $modalBaru,
+                'harga_unit' => $hargaUnitLama,
+                'harga_unit_saat_ini' => $hargaUnitSaatIni,
+                'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
+                'alur_dana' => $jumlahSaldo,
+            ]);
+
+            // Tambahkan data ke Kinerja Portofolio
+            $valuasiSaatIniBaru = $modalBaru;
+            $kinerjaPortofolioBaru = KinerjaPortofolio::create([
+                'user_id' => $userId,
+                'transaksi_id' => $transaksiBaru->id, // ID transaksi akan diisi setelah transaksi dibuat
+                'valuasi_saat_ini' => $valuasiSaatIniBaru,
+                'yield' => 0.00,
+            ]);
+
+            // Tambahkan data ke Historis
+            if (!$historisTerkait) {
+                Historis::create([
+                    'user_id' => $userId,
+                    'tahun' => $tahun,
+                    'bulan' => $bulan,
+                    'yield' => 0.00,
+                ]);
+            } else {
+                $historisTerkait->update([
+                    'yield' => 0.00,
+                ]);
+            }
+
+            // Tambahkan data ke Portofolio
+            Portofolio::create([
+                'user_id' => $userId,
+                'aset_id' => 1, // ID aset untuk "kas"
+                'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
+                'volume' => 1,
+                'cur_price' => $valuasiSaatIniBaru,
+            ]);
+
+        } else {
+            // Jika sudah ada data mutasi dana untuk tahun ini
+            $modalLama = $mutasiDanaTerakhir->modal;
+            $hargaUnit = $mutasiDanaTerakhir->harga_unit;
+            $hargaUnitSaatIni = ceil(
+                ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $mutasiDanaTerakhir->jumlah_unit_penyertaan
+            );
+
+            $jumlahUnitPenyertaanBaru = ($jumlahSaldo / $hargaUnitSaatIni) + $mutasiDanaTerakhir->jumlah_unit_penyertaan;
+
+            $mutasiDanaBaru = MutasiDana::create([
+                'user_id' => $userId,
+                'tahun' => $tahun,
+                'bulan' => $bulan,
+                'modal' => $modalLama,
+                'harga_unit' => $hargaUnit,
+                'harga_unit_saat_ini' => $hargaUnitSaatIni,
+                'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
+                'alur_dana' => $jumlahSaldo,
+            ]);
+
+            // Tambahkan data ke Kinerja Portofolio
+            $valuasiSaatIniBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
+            $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+
+            $kinerjaPortofolioBaru = KinerjaPortofolio::create([
+                'user_id' => $userId,
+                'transaksi_id' => $transaksiBaru->id, // ID transaksi akan ditambahkan di bawah
+                'valuasi_saat_ini' => $valuasiSaatIniBaru,
+                'yield' => $yield,
+            ]);
+
+            // Update atau tambahkan data ke Historis
+            if ($historisTerkait) {
+                $historisTerkait->update([
+                    'yield' => $yield,
+                ]);
+            } else {
+                Historis::create([
+                    'user_id' => $userId,
+                    'tahun' => $tahun,
+                    'bulan' => $bulan,
+                    'yield' => $yield,
+                ]);
+            }
+
+            // Tambahkan data ke Portofolio
+            $curPriceBaru = ($portofolioTerakhir->cur_price ?? 0) + $jumlahSaldo;
+
+            Portofolio::create([
+                'user_id' => $userId,
+                'aset_id' => 1, // ID aset untuk "kas"
+                'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
+                'volume' => 1,
+                'cur_price' => $curPriceBaru,
+            ]);
+        }
+
+        // Tambahkan data ke Saldo
+        $saldoBaru = Saldo::create([
+            'user_id' => $userId,
+            'tanggal' => $tanggal,
+            'tipe_saldo' => 'keluar',
+            'saldo' => $jumlahSaldo,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Withdraw saldo berhasil diproses.',
+            'data' => [
+                'saldo' => $saldoBaru,
+                'transaksi' => $transaksiBaru,
+                'mutasi_dana' => $mutasiDanaBaru ?? null,
+                'kinerja_portofolio' => $kinerjaPortofolioBaru ?? null,
+            ],
+        ]);
+    }
+
+    public function topUp1(Request $request)
+    {
+        $userId = $request->auth['user']['id'];
+        $jumlahSaldo = $request->input('jumlah_saldo');
+        $tipeSaldo = $request->input('tipe_saldo');
+        $tanggal = $request->input('tanggal');
+        $tahun = date('Y', strtotime($tanggal));
+        $bulan = date('n', strtotime($tanggal));
+
+        if ($tipeSaldo === 'masuk') {
+            // Tambahkan data ke Transaksi
+            $transaksiBaru = Transaksi::create([
+                'user_id' => $userId,
+                'aset_id' => 1, // ID aset untuk "kas"
+                'jenis_transaksi' => 'kas',
+                'tanggal' => $tanggal,
+                'volume' => 1,
+                'harga' => $jumlahSaldo,
+                'deskripsi' => 'Top-up saldo',
+            ]);
+
+            // Data pendukung
+            $mutasiDanaTerakhir = MutasiDana::where('user_id', $userId)
+                ->orderByDesc('id')
+                ->first();
+
+            $kinerjaPortofolioTerakhir = KinerjaPortofolio::where('user_id', $userId)
+                ->orderByDesc('id')
+                ->first();
+
+            $portofolioTerakhir = Portofolio::where('user_id', $userId)
+                ->where('aset_id', 1) // ID aset untuk "kas"
+                ->orderByDesc('id')
+                ->first();
+
+            $historisTerkait = Historis::where('user_id', $userId)
+                ->where('tahun', $tahun)
+                ->where('bulan', $bulan)
+                ->first();
+
+            // Jika belum ada data mutasi dana untuk tahun ini
+            if (!$mutasiDanaTerakhir || $mutasiDanaTerakhir->tahun < $tahun) {
+                $modalBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
+                $hargaUnitLama = $mutasiDanaTerakhir->harga_unit ?? 1000;
+    
+                $jumlahUnitPenyertaanBaru = ceil(
+                    $modalBaru / $hargaUnitLama
+                );
+    
+                $hargaUnitSaatIni = ceil(
+                    $modalBaru / $jumlahUnitPenyertaanBaru
+                );
+    
+                $mutasiDanaBaru = MutasiDana::create([
+                    'user_id' => $userId,
+                    'tahun' => $tahun,
+                    'bulan' => $bulan,
+                    'modal' => $modalBaru,
+                    'harga_unit' => $hargaUnitSaatIni,
+                    'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
+                    'alur_dana' => $jumlahSaldo,
+                ]);
+    
+                // Tambahkan data ke Kinerja Portofolio
+                $valuasiSaatIniBaru = $modalBaru;
+                $kinerjaPortofolioBaru = KinerjaPortofolio::create([
+                    'user_id' => $userId,
+                    'transaksi_id' => $transaksiBaru->id, // ID transaksi akan diisi setelah transaksi dibuat
+                    'valuasi_saat_ini' => $valuasiSaatIniBaru,
+                    'yield' => 0.00,
+                ]);
+    
+                // Tambahkan data ke Historis
+                if (!$historisTerkait) {
+                    Historis::create([
+                        'user_id' => $userId,
+                        'tahun' => $tahun,
+                        'bulan' => $bulan,
+                        'yield' => 0.00,
+                    ]);
+                } else {
+                    $historisTerkait->update([
+                        'yield' => 0.00,
+                    ]);
+                }
+    
+                // Tambahkan data ke Portofolio
+                Portofolio::create([
+                    'user_id' => $userId,
+                    'aset_id' => 1, // ID aset untuk "kas"
+                    'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
+                    'volume' => 1,
+                    'cur_price' => $valuasiSaatIniBaru,
+                ]);
+
+            } else {
+                // Jika sudah ada data mutasi dana untuk tahun ini
+                $modalLama = $mutasiDanaTerakhir->modal;
+                $hargaUnitSaatIni = ceil(
+                    ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $mutasiDanaTerakhir->jumlah_unit_penyertaan
+                );
+
+                $jumlahUnitPenyertaanBaru = ($jumlahSaldo / $hargaUnitSaatIni) + $mutasiDanaTerakhir->jumlah_unit_penyertaan;
+
+                $mutasiDanaBaru = MutasiDana::create([
+                    'user_id' => $userId,
+                    'tahun' => $tahun,
+                    'bulan' => $bulan,
+                    'modal' => $modalLama,
+                    'harga_unit' => $hargaUnitSaatIni,
+                    'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
+                    'alur_dana' => $jumlahSaldo,
+                ]);
+
+                // Tambahkan data ke Kinerja Portofolio
+                $valuasiSaatIniBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
+                $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+
+                $kinerjaPortofolioBaru = KinerjaPortofolio::create([
+                    'user_id' => $userId,
+                    'transaksi_id' => $transaksiBaru->id, // ID transaksi akan ditambahkan di bawah
+                    'valuasi_saat_ini' => $valuasiSaatIniBaru,
+                    'yield' => $yield,
+                ]);
+
+                // Update atau tambahkan data ke Historis
+                if ($historisTerkait) {
+                    $historisTerkait->update([
+                        'yield' => $yield,
+                    ]);
+                } else {
+                    Historis::create([
+                        'user_id' => $userId,
+                        'tahun' => $tahun,
+                        'bulan' => $bulan,
+                        'yield' => $yield,
+                    ]);
+                }
+
+                // Tambahkan data ke Portofolio
+                $curPriceBaru = ($portofolioTerakhir->cur_price ?? 0) + $jumlahSaldo;
+
+                Portofolio::create([
+                    'user_id' => $userId,
+                    'aset_id' => 1, // ID aset untuk "kas"
+                    'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
+                    'volume' => 1,
+                    'cur_price' => $curPriceBaru,
+                ]);
+            }
+
+            // Tambahkan data ke Saldo
+            $saldoBaru = Saldo::create([
+                'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'tipe_saldo' => 'masuk',
+                'saldo' => $jumlahSaldo,
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Top-up saldo berhasil diproses.',
+                'data' => [
+                    'saldo' => $saldoBaru,
+                    'transaksi' => $transaksiBaru,
+                    'mutasi_dana' => $mutasiDanaBaru ?? null,
+                    'kinerja_portofolio' => $kinerjaPortofolioBaru ?? null,
+                ],
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Tipe saldo tidak valid.',
+        ], 400);
+    }
+
+
     public function index(Request $request) {
         try {
             $saldo = Saldo::where('user_id', $request->auth['user']['id'])

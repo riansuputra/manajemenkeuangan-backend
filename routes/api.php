@@ -69,6 +69,7 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         
         Route::get('/mutasi-dana', [MutasiDanaController::class, 'index']);
         Route::apiResource('saldo', SaldoController::class);
+        Route::post('/topup', [SaldoController::class, 'topup']);
 
         Route::apiResource('aset', AsetController::class);
         Route::post('/aset/store-kas', [AsetController::class, 'storeKas']);
