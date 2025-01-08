@@ -71,6 +71,8 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::apiResource('saldo', SaldoController::class);
         Route::post('/topup', [SaldoController::class, 'topup']);
 
+        Route::post('/update-price', [TransaksiController::class, 'updatePrice']);
+
         Route::apiResource('aset', AsetController::class);
         Route::post('/aset/store-kas', [AsetController::class, 'storeKas']);
         Route::post('/aset/store-ewallet', [AsetController::class, 'storeEwallet']);

@@ -7,8 +7,7 @@ use App\Models\Saldo;
 use App\Models\MutasiDana;
 use App\Models\KinerjaPortofolio;
 use App\Models\Portofolio;
-use App\Models\HistorisBulanan;
-use App\Models\HistorisTahunan;
+use App\Models\Historis;
 use App\Models\Transaksi;
 use App\Models\Aset;
 use Carbon\Carbon;
@@ -67,12 +66,25 @@ class TransaksiController extends Controller
                 'yield' => $kinerjaPortofolioTerakhir->yield ?? 0.0,
             ]);
 
+            // Cek apakah aset sudah ada di portofolio user
+            $portofolio = Portofolio::where('user_id', $userId)
+                ->where('aset_id', $asetId)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $portofolioKas = Portofolio::where('user_id', $userId)
+                ->where('aset_id', 1)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $curPrice = $portofolioKas->cur_price - $totalHarga;
+
             Portofolio::create([
                 'user_id' => $userId,
                 'aset_id' => 1, // Aset kas
                 'volume' => 1,
                 'avg_price' => null, // Kosongkan
-                'cur_price' => $kinerjaPortofolioKas->valuasi_saat_ini - $totalHarga,
+                'cur_price' => $curPrice,
                 'kinerja_portofolio_id' => $kinerjaPortofolioKas->id,
             ]);
 
@@ -95,14 +107,18 @@ class TransaksiController extends Controller
                 'yield' => $kinerjaPortofolioKas->yield ?? 0.0,
             ]);
 
-            // Cek apakah aset sudah ada di portofolio user
-            $portofolio = Portofolio::where('user_id', $userId)
-                ->where('aset_id', $asetId)
-                ->first();
+            
 
             if ($portofolio) {
                 // Jika aset sudah ada di portofolio
                 $volumeBaru = $portofolio->volume + $volume;
+                // if ($portofolio->cur_price < $harga) {
+
+                // } else if ($portofolio->cur_price > $harga) {
+
+                // } else {
+
+                // }
                 $totalHargaSebelumnya = $portofolio->avg_price * $portofolio->volume;
                 $avgPriceBaru = ($totalHargaSebelumnya + $totalHarga) / $volumeBaru;
 
@@ -155,9 +171,155 @@ class TransaksiController extends Controller
         }
     }
 
+    public function updateCurrentPrice($userId, $asetId, $newPrice)
+    {
+        try {
+            // Ambil portofolio terakhir berdasarkan aset
+            $portofolio = Portofolio::where('user_id', $userId)
+                ->where('aset_id', $asetId)
+                ->latest('id')
+                ->first();
+
+            if ($portofolio) {
+                $portofolio->update(['cur_price' => $newPrice]);
+                // Ambil data terakhir untuk tiap aset_id yang bukan 1
+                $subquery = Portofolio::selectRaw('MAX(id) as last_id')
+                    ->where('user_id', $userId)
+                    ->where('aset_id', '!=', 1)
+                    ->groupBy('aset_id');
+
+                // Ambil data dari hasil subquery dan hitung total valuasi
+                $totalValuasiPorto = Portofolio::whereIn('id', $subquery->pluck('last_id'))
+                    ->selectRaw('SUM(volume * cur_price) as total_value')
+                    ->value('total_value');
+
+            } else {
+                return response()->json(['error' => 'Portofolio tidak ditemukan untuk aset tersebut.'], 404);
+
+            }
+
+            $mutasiDanaTerakhir = MutasiDana::where('user_id', $userId)
+                ->orderByDesc('id')
+                ->first();
+
+            $kinerjaPortofolioTerakhir = KinerjaPortofolio::where('user_id', $userId)
+                ->orderByDesc('id')
+                ->first();
+
+            $portofolioKasTerakhir = Portofolio::where('user_id', $userId)
+                ->where('aset_id', 1) // ID aset untuk "kas"
+                ->orderByDesc('id')
+                ->first();
+            
+            // dd($totalValuasiPorto);
+
+            $modalLama = $mutasiDanaTerakhir->modal;
+            $valuasiSaatIniBaru = ($portofolioKasTerakhir->cur_price ?? 0) + ($totalValuasiPorto ?? 0); //kamu disini bermasalah bang
+
+            $hargaUnitSaatIni = ceil(
+                ($valuasiSaatIniBaru ?? 0) / ($mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0)
+            );
+
+            $mutasiDanaTerakhir->update([
+                'harga_unit_saat_ini' => $hargaUnitSaatIni,
+            ]);
+
+            $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+
+            $kinerjaPortofolioBaru = KinerjaPortofolio::create([
+                'user_id' => $userId,
+                'transaksi_id' => $kinerjaPortofolioTerakhir->transaksi_id, // ID transaksi akan ditambahkan di bawah
+                'valuasi_saat_ini' => $valuasiSaatIniBaru,
+                'yield' => $yield,
+            ]);
+
+            // Perbarui atau buat data baru di historis
+            $bulan = now()->month;
+            $tahun = now()->year;
+
+            $historis = Historis::firstOrNew([
+                'user_id' => $userId,
+                'bulan' => $bulan,
+                'tahun' => $tahun,
+            ]);
+            $historis->yield = $yield;
+            $historis->save();
+
+            return response()->json([
+                'message' => 'Berhasil update data harga.',
+                'auth' => $userId,
+                'data' => [
+                    'portofolio' => $portofolio,
+                    'mutasi_dana' => $mutasiDanaTerakhir,
+                    'kinerja_portofolio' => KinerjaPortofolio::latest('id')->first(),
+                    'historis' => $historis,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updatePrice(Request $request)
+    {
+        $userId = $request->auth['user']['id'];
+        $asetId = $request->input('aset_id');
+        $newPrice = $request->input('new_price');
+
+        return $this->updateCurrentPrice($userId, $asetId, $newPrice);
+    }
+
+
+    public function updateCurrentPrice1($userId, $asetId, $newPrice)
+    {
+        try {
+            // Ambil portofolio terkait
+            $portofolio = Portofolio::where('user_id', $userId)
+                ->where('aset_id', $asetId)
+                ->last();
+
+            if (!$portofolio) {
+                throw new \Exception("Portofolio untuk aset ID $asetId tidak ditemukan.");
+            }
+
+            // Hitung perubahan harga
+            $priceDifference = $newPrice - $portofolio->cur_price;
+
+            // Update tabel portofolio
+            $portofolio->update(['cur_price' => $newPrice]);
+
+            // Update tabel kinerja_portofolio
+            KinerjaPortofolio::where('user_id', $userId)
+                ->where('id', $portofolio->kinerja_portofolio_id)
+                ->update(['valuasi_saat_ini' => \DB::raw("valuasi_saat_ini + $priceDifference")]);
+
+            // Tambahkan ke historis
+            Historis::create([
+                'user_id' => $userId,
+                'aset_id' => $asetId,
+                'tanggal' => now(),
+                'harga_lama' => $portofolio->cur_price,
+                'harga_baru' => $newPrice,
+                'perubahan' => $priceDifference,
+            ]);
+
+            // Update mutasi dana jika diperlukan
+            MutasiDana::create([
+                'user_id' => $userId,
+                'tanggal' => now(),
+                'deskripsi' => "Pembaruan harga aset ID $asetId",
+                'jumlah' => $priceDifference,
+                'tipe_mutasi' => 'update_harga',
+            ]);
+
+            return response()->json(['message' => 'Current price berhasil diperbarui.'], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
 
     
-
 
     public function index(Request $request) 
     {
