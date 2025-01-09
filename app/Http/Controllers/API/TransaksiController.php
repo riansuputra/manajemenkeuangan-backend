@@ -119,7 +119,7 @@ class TransaksiController extends Controller
                 // Jika aset sudah ada di portofolio
                 $volumeBaru = $portofolio->volume + $volume;
                 $totalHargaBaru = $volumeBaru * $harga;
-                if ($portofolio->cur_price != $harga) {
+                // if ($portofolio->cur_price != $harga) {
                     
                     $valuasiSaatIniBaru = ($portofolioKasTerakhir->cur_price ?? 0) + ($totalValuasiPorto ?? 0) + ($totalHargaBaru ?? 0); 
 
@@ -132,13 +132,13 @@ class TransaksiController extends Controller
                     ]);
 
                     $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
-                }
+                // }
                 
                 // Tambahkan data ke kinerja_portofolio
                 $kinerjaPortofolio = KinerjaPortofolio::create([
                     'user_id' => $userId,
                     'transaksi_id' => $transaksi->id,
-                    'valuasi_saat_ini' => $valuasiSaatIniBaru,
+                    'valuasi_saat_ini' => ($valuasiSaatIniBaru ?? ($kinerjaPortofolioKas->valuasi_saat_ini ?? 0) + $totalHarga),
                     'yield' => $yield ?? 0.0,
                 ]);
                 
