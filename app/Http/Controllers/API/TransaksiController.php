@@ -49,6 +49,10 @@ class TransaksiController extends Controller
                 ->orderBy('id', 'desc')
                 ->first();
 
+            $mutasiDanaTerakhir = MutasiDana::where('user_id', $userId)
+                ->orderByDesc('id')
+                ->first();
+
             $transaksiKas = Transaksi::create([
                 'user_id' => $userId,
                 'tanggal' => $tanggal,
@@ -79,7 +83,7 @@ class TransaksiController extends Controller
 
             $curPrice = $portofolioKas->cur_price - $totalHarga;
 
-            Portofolio::create([
+            $portofolioKasTerakhir = Portofolio::create([
                 'user_id' => $userId,
                 'aset_id' => 1, // Aset kas
                 'volume' => 1,
@@ -99,26 +103,45 @@ class TransaksiController extends Controller
                 'deskripsi' => 'Beli Aset '.$asetId,
             ]);
 
-            // Tambahkan data ke kinerja_portofolio
-            $kinerjaPortofolio = KinerjaPortofolio::create([
-                'user_id' => $userId,
-                'transaksi_id' => $transaksi->id,
-                'valuasi_saat_ini' => ($kinerjaPortofolioKas->valuasi_saat_ini ?? 0) + $totalHarga,
-                'yield' => $kinerjaPortofolioKas->yield ?? 0.0,
-            ]);
-
             
-
             if ($portofolio) {
+                // Ambil data terakhir untuk tiap aset_id yang bukan 1
+                $subquery = Portofolio::selectRaw('MAX(id) as last_id')
+                    ->where('user_id', $userId)
+                    ->whereNotIn('aset_id', [1, $asetId])
+                    ->groupBy('aset_id');
+
+                // Ambil data dari hasil subquery dan hitung total valuasi
+                $totalValuasiPorto = Portofolio::whereIn('id', $subquery->pluck('last_id'))
+                    ->selectRaw('SUM(volume * cur_price) as total_value')
+                    ->value('total_value');
+
                 // Jika aset sudah ada di portofolio
                 $volumeBaru = $portofolio->volume + $volume;
-                // if ($portofolio->cur_price < $harga) {
+                $totalHargaBaru = $volumeBaru * $harga;
+                if ($portofolio->cur_price != $harga) {
+                    
+                    $valuasiSaatIniBaru = ($portofolioKasTerakhir->cur_price ?? 0) + ($totalValuasiPorto ?? 0) + ($totalHargaBaru ?? 0); 
 
-                // } else if ($portofolio->cur_price > $harga) {
+                    $hargaUnitSaatIni = ceil(
+                        ($valuasiSaatIniBaru ?? 0) / ($mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0)
+                    );
 
-                // } else {
+                    $mutasiDanaTerakhir->update([
+                        'harga_unit_saat_ini' => $hargaUnitSaatIni,
+                    ]);
 
-                // }
+                    $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+                }
+                
+                // Tambahkan data ke kinerja_portofolio
+                $kinerjaPortofolio = KinerjaPortofolio::create([
+                    'user_id' => $userId,
+                    'transaksi_id' => $transaksi->id,
+                    'valuasi_saat_ini' => $valuasiSaatIniBaru,
+                    'yield' => $yield ?? 0.0,
+                ]);
+                
                 $totalHargaSebelumnya = $portofolio->avg_price * $portofolio->volume;
                 $avgPriceBaru = ($totalHargaSebelumnya + $totalHarga) / $volumeBaru;
 
@@ -131,6 +154,13 @@ class TransaksiController extends Controller
                     'kinerja_portofolio_id' => $kinerjaPortofolio->id,
                 ]);
             } else {
+                // Tambahkan data ke kinerja_portofolio
+                $kinerjaPortofolio = KinerjaPortofolio::create([
+                    'user_id' => $userId,
+                    'transaksi_id' => $transaksi->id,
+                    'valuasi_saat_ini' => ($kinerjaPortofolioKas->valuasi_saat_ini ?? 0) + $totalHarga,
+                    'yield' => $kinerjaPortofolioKas->yield ?? 0.0,
+                ]);
                 // Jika aset belum ada di portofolio
                 Portofolio::create([
                     'user_id' => $userId,
@@ -214,7 +244,7 @@ class TransaksiController extends Controller
             // dd($totalValuasiPorto);
 
             $modalLama = $mutasiDanaTerakhir->modal;
-            $valuasiSaatIniBaru = ($portofolioKasTerakhir->cur_price ?? 0) + ($totalValuasiPorto ?? 0); //kamu disini bermasalah bang
+            $valuasiSaatIniBaru = ($portofolioKasTerakhir->cur_price ?? 0) + ($totalValuasiPorto ?? 0); 
 
             $hargaUnitSaatIni = ceil(
                 ($valuasiSaatIniBaru ?? 0) / ($mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0)
