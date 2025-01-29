@@ -102,7 +102,7 @@ class HistorisController extends Controller
 
             // Hitung yield_ihsg jika kedua nilai tersedia
             if ($historis->ihsg_start && $historis->ihsg_end) {
-                $historis->yield_ihsg = (($historis->ihsg_end - $historis->ihsg_start) / $historis->ihsg_start) * 100;
+                $historis->yield_ihsg = round((($historis->ihsg_end - $historis->ihsg_start) / $historis->ihsg_start) * 100, 2);
             }
 
             $historis->save();

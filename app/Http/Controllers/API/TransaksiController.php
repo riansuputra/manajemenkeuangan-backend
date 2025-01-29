@@ -76,7 +76,7 @@ class TransaksiController extends Controller
                     'user_id' => $userId,
                     'transaksi_id' => $transaksiKas->id,
                     'valuasi_saat_ini' => ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) - $totalHarga,
-                    'yield' => $kinerjaPortofolioTerakhir->yield ?? 0.0,
+                    'yield' => $kinerjaPortofolioTerakhir->yield ?? 0.00,
                 ]);
 
                 // Cek apakah aset sudah ada di portofolio user
@@ -139,7 +139,7 @@ class TransaksiController extends Controller
                             'harga_unit_saat_ini' => $hargaUnitSaatIni,
                         ]);
 
-                        $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+                        $yield = round(($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1) * 100, 2);
                     // }
                     
                     // Tambahkan data ke kinerja_portofolio
@@ -147,7 +147,7 @@ class TransaksiController extends Controller
                         'user_id' => $userId,
                         'transaksi_id' => $transaksi->id,
                         'valuasi_saat_ini' => ($valuasiSaatIniBaru ?? ($kinerjaPortofolioKas->valuasi_saat_ini ?? 0) + $totalHarga),
-                        'yield' => $yield ?? 0.0,
+                        'yield' => $yield ?? 0.00,
                     ]);
 
                     // Perbarui atau buat data baru di historis
@@ -188,7 +188,7 @@ class TransaksiController extends Controller
                         'user_id' => $userId,
                         'transaksi_id' => $transaksi->id,
                         'valuasi_saat_ini' => ($kinerjaPortofolioKas->valuasi_saat_ini ?? 0) + $totalHarga,
-                        'yield' => $kinerjaPortofolioKas->yield ?? 0.0,
+                        'yield' => $kinerjaPortofolioKas->yield ?? 0.00,
                     ]);
                     // Jika aset belum ada di portofolio
                     Portofolio::create([
@@ -292,7 +292,7 @@ class TransaksiController extends Controller
                         'user_id' => $userId,
                         'transaksi_id' => $transaksiKas->id,
                         'valuasi_saat_ini' => ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $totalHarga,
-                        'yield' => $kinerjaPortofolioTerakhir->yield ?? 0.0,
+                        'yield' => $kinerjaPortofolioTerakhir->yield ?? 0.00,
                     ]);
 
                     $curPrice = $portofolioKas->cur_price + $totalHarga;
@@ -345,14 +345,14 @@ class TransaksiController extends Controller
                         'harga_unit_saat_ini' => $hargaUnitSaatIni,
                     ]);
 
-                    $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+                    $yield = round(($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1) * 100 , 2);
                     
                     // Tambahkan data ke kinerja_portofolio
                     $kinerjaPortofolio = KinerjaPortofolio::create([
                         'user_id' => $userId,
                         'transaksi_id' => $transaksi->id,
                         'valuasi_saat_ini' => ($valuasiSaatIniBaru ?? ($kinerjaPortofolioKas->valuasi_saat_ini ?? 0) + $totalHarga),
-                        'yield' => $yield ?? 0.0,
+                        'yield' => $yield ?? 0.00,
                     ]);
 
                     $historisTerakhir = Historis::where('tahun', $tahun)
@@ -471,7 +471,7 @@ class TransaksiController extends Controller
                 'harga_unit_saat_ini' => $hargaUnitSaatIni,
             ]);
 
-            $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+            $yield = round(($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1) * 100 , 2);
 
             $kinerjaPortofolioBaru = KinerjaPortofolio::create([
                 'user_id' => $userId,

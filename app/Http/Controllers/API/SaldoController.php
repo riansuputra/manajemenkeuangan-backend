@@ -172,7 +172,7 @@ class SaldoController extends Controller
 
             // Tambahkan data ke Kinerja Portofolio
             $valuasiSaatIniBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
-            $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+            $yield = round(($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1) * 100, 2);
 
             $kinerjaPortofolioBaru = KinerjaPortofolio::create([
                 'user_id' => $userId,
@@ -358,7 +358,7 @@ class SaldoController extends Controller
 
             // Tambahkan data ke Kinerja Portofolio
             $valuasiSaatIniBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
-            $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+            $yield = round(($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1) * 100, 2);
 
             $kinerjaPortofolioBaru = KinerjaPortofolio::create([
                 'user_id' => $userId,
@@ -530,7 +530,7 @@ class SaldoController extends Controller
 
                 // Tambahkan data ke Kinerja Portofolio
                 $valuasiSaatIniBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
-                $yield = ($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1);
+                $yield = round(($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1) * 100, 2);
 
                 $kinerjaPortofolioBaru = KinerjaPortofolio::create([
                     'user_id' => $userId,
@@ -715,7 +715,7 @@ class SaldoController extends Controller
                         $kinerja_baru->transaksi_id = $transaksi->id;
                             
                         $kinerja_baru->valuasi_saat_ini = $kinerja->valuasi_saat_ini + $reqsaldo;
-                        $kinerja_baru->yield = ($mutasi_baru->harga_unit_saat_ini - $mutasi->harga_unit) / $mutasi->harga_unit;
+                        $kinerja_baru->yield = round((($mutasi_baru->harga_unit_saat_ini - $mutasi->harga_unit) / $mutasi->harga_unit) * 100, 2);
                         $kinerja_baru->save();
 
                         // masukkan ke histori tahunan dan bulanan
