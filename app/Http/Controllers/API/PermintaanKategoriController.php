@@ -15,18 +15,17 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class PermintaanKategoriController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $permintaan = new PermintaanKategori();
             $permintaan = PermintaanKategori::where('user_id', $request->auth['user']['id'])
                                         ->get();
-            
+            // dd($permintaan);
             return response()->json([
                 'message' => 'Berhasil mendapatkan daftar permintaan kategori.',
                 'auth' => $request->auth,
                 'data' => [
-                    'PermintaanKategori' => $permintaan
+                    'permintaan' => $permintaan
                 ],
             ], Response::HTTP_OK);
 

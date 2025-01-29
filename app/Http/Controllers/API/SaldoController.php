@@ -19,25 +19,47 @@ class SaldoController extends Controller
 {
     public function topUp(Request $request)
     {
-        $userId = $request->auth['user']['id'];
-        $jumlahSaldo = $request->input('saldo');
-        $tipeSaldo = $request->input('tipe_saldo');
-        $tanggal = $request->input('tanggal');
-        
+        try {
 
-        if ($tipeSaldo === 'masuk') {
-            return $this->handleSaldoMasuk($userId, $jumlahSaldo, $tanggal);
-        } elseif ($tipeSaldo === 'keluar') {
-            return $this->handleSaldoKeluar($userId, $jumlahSaldo, $tanggal);
+            $request->validate([
+                'saldo' => 'required|integer|min:1',
+            ]);
+            
+            $userId = $request->auth['user']['id'];
+            $jumlahSaldo = $request->input('saldo');
+            $tipeSaldo = $request->input('tipe_saldo');
+            $tanggal = $request->input('tanggal');
+            
+
+            if ($tipeSaldo === 'masuk') {
+                return $this->handleSaldoMasuk($request, $userId, $jumlahSaldo, $tanggal);
+            } elseif ($tipeSaldo === 'keluar') {
+                return $this->handleSaldoKeluar($request, $userId, $jumlahSaldo, $tanggal);
+            }
+
+            return response()->json([
+                'auth' => $request->auth,
+                'status' => 'error',
+                'message' => 'Tipe saldo tidak valid.',
+            ], 400);
+
+        } catch (\Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' => $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                ], Response::HTTP_BAD_REQUEST);
+            }
         }
-
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Tipe saldo tidak valid.',
-        ], 400);
     }
 
-    private function handleSaldoMasuk($userId, $jumlahSaldo, $tanggal)
+    private function handleSaldoMasuk(Request $request, $userId, $jumlahSaldo, $tanggal)
     {
         $tahun = date('Y', strtotime($tanggal));
         $bulan = date('n', strtotime($tanggal));
@@ -195,6 +217,7 @@ class SaldoController extends Controller
 
         return response()->json([
             'status' => 'success',
+            'auth' => $request->auth,
             'message' => 'Top-up saldo berhasil diproses.',
             'data' => [
                 'saldo' => $saldoBaru,
@@ -202,10 +225,10 @@ class SaldoController extends Controller
                 'mutasi_dana' => $mutasiDanaBaru ?? null,
                 'kinerja_portofolio' => $kinerjaPortofolioBaru ?? null,
             ],
-        ]);
+        ], Response::HTTP_CREATED);
     }
 
-    private function handleSaldoKeluar($userId, $jumlahSaldo, $tanggal)
+    private function handleSaldoKeluar(Request $request, $userId, $jumlahSaldo, $tanggal)
     {
         $tahun = date('Y', strtotime($tanggal));
         $bulan = date('n', strtotime($tanggal));
@@ -215,6 +238,12 @@ class SaldoController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Saldo tidak mencukupi.',
+            ], 400);
+        } else if ($jumlahSaldo == $totalSaldo) {
+            $maksimalWd = number_format(($jumlahSaldo - 1), 0, ',', '.');
+            return response()->json([
+                'status' => 'warning',
+                'message' => 'Maksimal withdraw saldo adalah Rp. '.$maksimalWd,
             ], 400);
         }
 
@@ -375,13 +404,14 @@ class SaldoController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Withdraw saldo berhasil diproses.',
+            'auth' => $request->auth,
             'data' => [
                 'saldo' => $saldoBaru,
                 'transaksi' => $transaksiBaru,
                 'mutasi_dana' => $mutasiDanaBaru ?? null,
                 'kinerja_portofolio' => $kinerjaPortofolioBaru ?? null,
             ],
-        ]);
+        ],Response::HTTP_CREATED);
     }
 
     public function topUp1(Request $request)

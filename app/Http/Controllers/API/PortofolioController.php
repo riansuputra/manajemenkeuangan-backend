@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\KinerjaPortofolio;
 use App\Models\Portofolio;
 use App\Models\Saham;
 use App\Models\Aset;
@@ -35,6 +36,37 @@ Class PortofolioController extends Controller
                 'auth' => $request->auth,
                 'data' => [
                     'portofolio' => $portofolio
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
+    public function kinerja(Request $request)
+    {
+        try {
+            $kinerja = new KinerjaPortofolio();
+            if($request->auth['user_type'] == 'user') {
+                $kinerja = $kinerja->where('user_id', $request->auth['user']['id']);
+            }
+            $kinerja = $kinerja->with('transaksi')->get();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan data kinerja portofolio.',
+                'auth' => $request->auth,
+                'data' => [
+                    'kinerja' => $kinerja
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {

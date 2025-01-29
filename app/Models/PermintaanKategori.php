@@ -11,7 +11,6 @@ class PermintaanKategori extends Model
 
     protected $table = 'permintaan_kategori';
     protected $guarded = [];
-    protected $hidden = ['created_at', 'updated_at'];
 
     public function admin() 
     {

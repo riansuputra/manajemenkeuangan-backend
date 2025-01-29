@@ -34,7 +34,7 @@ use App\Http\Controllers\API\TransactionHistoryController;
 use App\Http\Controllers\API\KategoriPengeluaranController;
 use App\Http\Controllers\API\ManajemenPortofolioController;
 
-Route::middleware([ApiKeyMiddleware::class])->group(function () {
+Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function () {
     Route::get('/auth', [AuthController::class, 'auth']);
 
     Route::middleware([GuestMiddleware::class])->group(function () {
@@ -72,6 +72,9 @@ Route::middleware([ApiKeyMiddleware::class])->group(function () {
         Route::post('/topup', [SaldoController::class, 'topup']);
 
         Route::post('/update-price', [TransaksiController::class, 'updatePrice']);
+        Route::post('/store-jual', [TransaksiController::class, 'storeJual']);
+
+        Route::get('/kinerja-portofolio', [PortofolioController::class, 'kinerja']);
 
         Route::apiResource('aset', AsetController::class);
         Route::post('/aset/store-kas', [AsetController::class, 'storeKas']);

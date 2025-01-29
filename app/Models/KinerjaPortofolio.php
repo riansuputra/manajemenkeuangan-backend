@@ -11,7 +11,6 @@ class KinerjaPortofolio extends Model
 
     protected $table = 'kinerja_portofolio';
     protected $guarded = [];
-    protected $hidden = ['created_at', 'updated_at'];
 
     public function transaksi()
     {
