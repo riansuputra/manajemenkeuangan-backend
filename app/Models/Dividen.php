@@ -11,5 +11,4 @@ class Dividen extends Model
 
     protected $table = 'dividen';
     protected $guarded = [];
-    protected $hidden = ['created_at', 'updated_at'];
 }

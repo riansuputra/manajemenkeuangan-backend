@@ -355,13 +355,15 @@ class TransaksiController extends Controller
                         'yield' => $yield ?? 0.00,
                     ]);
 
-                    $historisTerakhir = Historis::where('tahun', $tahun)
-                        ->where('bulan', $bulan)
-                        ->first();
+                    
 
                     // Perbarui atau buat data baru di historis
                     $tahun = date('Y', strtotime($tanggal));
                     $bulan = date('n', strtotime($tanggal));
+
+                    $historisTerakhir = Historis::where('tahun', $tahun)
+                        ->where('bulan', $bulan)
+                        ->first();
 
                     $historis = Historis::firstOrNew([
                         'user_id' => $userId,
