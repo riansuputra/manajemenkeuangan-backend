@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('dividen', function (Blueprint $table) {
             $table->id();
-            $table->string('emiten');
-            $table->decimal('dividen_per_saham', 10, 2);
-            $table->decimal('dividen_yield', 5, 2);
+            $table->foreignId('aset_id')->constrained('aset');
+            $table->decimal('dividen', 10, 2);
             $table->date('cum_date');
+            $table->date('ex_date');
+            $table->date('recording_date');
             $table->date('payment_date');
             $table->timestamps();
         });

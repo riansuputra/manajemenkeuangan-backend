@@ -11,4 +11,9 @@ class Dividen extends Model
 
     protected $table = 'dividen';
     protected $guarded = [];
+
+    public function aset()
+    {
+        return $this->belongsTo(Aset::class, 'aset_id', 'id');
+    }
 }

@@ -16,7 +16,7 @@ class DividenController extends Controller
     public function index(Request $request)
     {
         try {
-            $dividen = Dividen::all();
+            $dividen = Dividen::with('aset')->get();
             return response()->json([
                 'message' => 'Berhasil mendapatkan dividen.',
                 'auth' => $request->auth,
@@ -49,17 +49,19 @@ class DividenController extends Controller
     {
         try {
             $request->validate([
-                'emiten' => 'required',
-                'dividen_per_saham' => 'required',
-                'dividen_yield' => 'required',
+                'aset_id' => 'required',
+                'dividen' => 'required',
                 'cum_date' => 'required',
+                'ex_date' => 'required',
+                'recording_date' => 'required',
                 'payment_date' => 'required',
             ]);
             $dividen = new Dividen();
-            $dividen->emiten = $request->emiten;
-            $dividen->dividen_per_saham = $request->dividen_per_saham;
-            $dividen->dividen_yield = $request->dividen_yield;
+            $dividen->aset_id = $request->aset_id;
+            $dividen->dividen = $request->dividen;
             $dividen->cum_date = $request->cum_date;
+            $dividen->ex_date = $request->ex_date;
+            $dividen->recording_date = $request->recording_date;
             $dividen->payment_date = $request->payment_date;
             $dividen->save();
             return response()->json([
@@ -124,17 +126,18 @@ class DividenController extends Controller
             $dividen = new Dividen();
             $dividen = $dividen->findOrFail($id);
             $request->validate([
-                'emiten' => 'required',
-                'dividen_per_saham' => 'required',
-                'dividen_yield' => 'required',
+                'aset_id' => 'required',
+                'dividen' => 'required',
                 'cum_date' => 'required',
+                'ex_date' => 'required',
+                'recording_date' => 'required',
                 'payment_date' => 'required',
             ]);
-            $dividen = new Dividen();
-            $dividen->emiten = $request->emiten;
-            $dividen->dividen_per_saham = $request->dividen_per_saham;
-            $dividen->dividen_yield = $request->dividen_yield;
+            $dividen->aset_id = $request->aset_id;
+            $dividen->dividen = $request->dividen;
             $dividen->cum_date = $request->cum_date;
+            $dividen->ex_date = $request->ex_date;
+            $dividen->recording_date = $request->recording_date;
             $dividen->payment_date = $request->payment_date;
             $dividen->save();
             return response()->json([

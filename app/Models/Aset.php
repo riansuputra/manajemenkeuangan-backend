@@ -17,6 +17,10 @@ class Aset extends Model
     {
         return $this->hasMany(Portofolio::class, 'aset_id', 'id');
     }
+    public function dividen()
+    {
+        return $this->hasMany(Dividen::class, 'aset_id', 'id');
+    }
     public function transaksi()
     {
         return $this->hasMany(Transaksi::class, 'aset_id', 'id');
