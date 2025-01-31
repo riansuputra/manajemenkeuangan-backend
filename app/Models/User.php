@@ -75,5 +75,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Historis::class, 'user_id', 'id');
     }
+    public function kategori_pribadi()
+    {
+        return $this->hasMany(KategoriPribadi::class, 'user_id', 'id');
+    }
     
 }

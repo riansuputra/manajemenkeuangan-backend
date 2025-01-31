@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PermintaanKategori;
 use App\Models\KategoriPengeluaran;
 use App\Models\KategoriPemasukan;
+use App\Models\KategoriPribadi;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;
@@ -82,33 +83,84 @@ class PermintaanKategoriController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'tipe_kategori' => 'required|in:pengeluaran,pemasukan',
-            'nama_kategori' => ['required','string','max:100',Rule::unique('category_requests')],
-        ]);
+        try {
+            $request->validate([
+                'tipe_kategori' => 'required|in:pengeluaran,pemasukan',
+                'nama_kategori' => [
+                    'required', 
+                    'string', 
+                    'max:100',
+                    Rule::unique('permintaan_kategori')->where(function ($query) use ($request) {
+                        return $query->where('tipe_kategori', $request->tipe_kategori)
+                                    ->where('scope', $request->cakupan_kategori);
+                    })
+                ],
+                'cakupan_kategori' => 'required|in:global,personal',
+            ]);
 
-        $exists = false;
-        if ($request->tipe_kategori == 'pengeluaran') {
-            $exists = \App\Models\KategoriPengeluaran::where('nama_kategori_pengeluaran', $request->nama_kategori)->exists();
-        } else if ($request->tipe_kategori == 'pemasukan') {
-            $exists = \App\Models\KategoriPemasukan::where('nama_kategori_pemasukan', $request->nama_kategori)->exists();
+            $existsGlobal = false;
+            $existsPersonal = false;
+            if ($request->tipe_kategori == 'pengeluaran') {
+                $existsGlobal = \App\Models\KategoriPengeluaran::whereRaw('LOWER(nama_kategori_pengeluaran) = ?', [strtolower($request->nama_kategori)])->exists();
+                $existsPersonal = \App\Models\PermintaanKategori::whereRaw('LOWER(nama_kategori) = ?', [strtolower($request->nama_kategori.' (Personal)')])
+                    ->where('tipe_kategori', $request->tipe_kategori)
+                    ->where('user_id', $request->auth['user']['id'])
+                    ->where('scope', $request->cakupan_kategori)->exists();
+            } else if ($request->tipe_kategori == 'pemasukan') {
+                $existsGlobal = \App\Models\KategoriPemasukan::whereRaw('LOWER(nama_kategori_pemasukan) = ?', [strtolower($request->nama_kategori)])->exists();
+                $existsPersonal = \App\Models\PermintaanKategori::whereRaw('LOWER(nama_kategori) = ?', [strtolower($request->nama_kategori.' (Personal)')])
+                    ->where('tipe_kategori', $request->tipe_kategori)
+                    ->where('user_id', $request->auth['user']['id'])
+                    ->where('scope', $request->cakupan_kategori)->exists();
+            }
+
+            if ($existsGlobal && $existsPersonal) {
+                return response()->json(['message' => 'Kategori sudah ada untuk tipe kategori yang dipilih secara global dan personal.'], 422);
+            } else if ($existsGlobal) {
+                return response()->json(['message' => 'Nama kategori sudah ada untuk tipe kategori yang dipilih secara global.'], 422);
+            } else if ($existsPersonal) {
+                return response()->json(['message' => 'Nama kategori sudah ada untuk tipe kategori yang dipilih secara personal.'], 422);
+            }
+
+            $nama = $request->cakupan_kategori == 'personal' ? $request->nama_kategori . ' (Personal)' : $request->nama_kategori;
+
+            $admin = isset($request->auth['admin']['id']) ? $request->auth['admin']['id'] : 1;
+
+            $permintaanKategori = PermintaanKategori::create([
+                'tipe_kategori' => $request->tipe_kategori,
+                'nama_kategori' => $nama,
+                'admin_id' => $admin,
+                'user_id' => $request->auth['user']['id'],
+                'scope' => $request->cakupan_kategori,
+            ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Permintaan kategori berhasil ditambahkan.',
+                'auth' => $request->auth,
+                'data' => [
+                    'permintaan_kategori' => $permintaanKategori,
+                ],
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
         }
-
-        if ($exists) {
-            return response()->json(['message' => 'Category name already exists in the selected category type.'], 422);
-        }
-
-        PermintaanKategori::create([
-            'tipe_kategori' => $request->tipe_kategori,
-            'nama_kategori' => $request->nama_kategori,
-            'user_id' => $request->user_id,
-        ]);
-
-        return response()->json(['message' => 'Category request submitted successfully.']);
     }
+
 
     public function approve(Request $request, $id)
     {
+        try{
         $permintaan = PermintaanKategori::findOrFail($id);
         if ($permintaan->status == 'approved') {
             return response()->json(['message' => 'Category request already approved.'], 400);
@@ -116,7 +168,7 @@ class PermintaanKategoriController extends Controller
 
         $permintaan->update([
             'status' => 'approved',
-            'admin_id' => $request->auth['admin']['admin_id'],
+            'admin_id' => $request->auth['admin']['id'],
         ]);
 
         if ($permintaan->tipe_kategori == 'pengeluaran') {
@@ -126,10 +178,25 @@ class PermintaanKategoriController extends Controller
         }
 
         return response()->json(['message' => 'Category request approved successfully.']);
+    } catch (Exception $e) {
+        if ($e instanceof ValidationException) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'auth' => $request->auth,
+                'errors' =>  $e->validator->errors(),
+            ], Response::HTTP_BAD_REQUEST);
+        } else {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'auth' => $request->auth
+            ], Response::HTTP_BAD_REQUEST);
+        }
+    }
     }
 
     public function reject(Request $request, $id)
     {
+        try{
         $request->validate([
             'message' => 'nullable',
         ]);
@@ -141,10 +208,24 @@ class PermintaanKategoriController extends Controller
 
         $permintaan->update([
             'status' => 'rejected',
-            'admin_id' => $request->auth['admin']['admin_id'],
+            'admin_id' => $request->auth['admin']['id'],
         ]);
 
         return response()->json(['message' => 'Category request rejected successfully.']);
+    } catch (Exception $e) {
+        if ($e instanceof ValidationException) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'auth' => $request->auth,
+                'errors' =>  $e->validator->errors(),
+            ], Response::HTTP_BAD_REQUEST);
+        } else {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'auth' => $request->auth
+            ], Response::HTTP_BAD_REQUEST);
+        }
+    }
     }
 
     /**

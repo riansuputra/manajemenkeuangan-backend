@@ -95,7 +95,8 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         Route::get('/mutasi-dana', [PortofolioController::class, 'mutasi_dana']);
         
 
-        Route::post('/permintaan-kategori', [PermintaanKategoriController::class, 'storeWeb']);
+        Route::post('/permintaan-kategori-store', [PermintaanKategoriController::class, 'store']);
+        Route::get('/permintaan-kategori', [PermintaanKategoriController::class, 'index']);
 
         Route::get('/pengeluaransWeb', [PengeluaranController::class, 'indexWeb']);
 
@@ -123,8 +124,8 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         
         
         Route::get('/permintaan-kategori-admin', [PermintaanKategoriController::class, 'indexAdmin']);
-        Route::post('/permintaan-kategori/{id}/terima', [PermintaanKategoriController::class, 'approve']);
-        Route::post('/permintaan-kategori/{id}/tolak', [PermintaanKategoriController::class, 'reject']);
+        Route::post('/permintaan-kategori/{id}/approve', [PermintaanKategoriController::class, 'approve']);
+        Route::post('/permintaan-kategori/{id}/reject', [PermintaanKategoriController::class, 'reject']);
 
         Route::get('/user', [UserController::class, 'index']);
         

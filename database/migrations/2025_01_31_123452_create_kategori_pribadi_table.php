@@ -11,15 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('permintaan_kategori', function (Blueprint $table) {
+        Schema::create('kategori_pribadi', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('user');
-            $table->foreignId('admin_id')->constrained('admin')->nullable();
+            $table->foreignId('user_id')->constrained('user'); // Kategori milik siapa
             $table->enum('tipe_kategori', ['pemasukan', 'pengeluaran']);
             $table->string('nama_kategori');
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->enum('scope', ['global', 'personal'])->default('global');
-            $table->text('message')->nullable();
             $table->timestamps();
         });
     }
@@ -29,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('permintaan_kategori');
+        Schema::dropIfExists('kategori_pribadi');
     }
 };
