@@ -28,6 +28,7 @@ use App\Http\Controllers\API\PortofolioController;
 use App\Http\Controllers\API\PengeluaranController;
 use App\Http\Controllers\API\PortofolioBeliController;
 use App\Http\Controllers\API\PortofolioJualController;
+use App\Http\Controllers\API\KategoriPribadiController;
 use App\Http\Controllers\API\PermintaanKategoriController;
 use App\Http\Controllers\API\KategoriPemasukanController;
 use App\Http\Controllers\API\TransactionHistoryController;
@@ -55,6 +56,7 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         Route::apiResource('pengeluaran', PengeluaranController::class);
         Route::apiResource('kategori-pemasukan', KategoriPemasukanController::class);
         Route::apiResource('kategori-pengeluaran', KategoriPengeluaranController::class);
+        Route::apiResource('kategori-pribadi', KategoriPribadiController::class);
         Route::apiResource('anggaran', AnggaranController::class);
 
         Route::apiResource('catatan', CatatanController::class);
@@ -125,7 +127,7 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         
         Route::get('/permintaan-kategori-admin', [PermintaanKategoriController::class, 'indexAdmin']);
         Route::post('/permintaan-kategori/{id}/approve', [PermintaanKategoriController::class, 'approve']);
-        Route::post('/permintaan-kategori/{id}/reject', [PermintaanKategoriController::class, 'reject']);
+        Route::post('/permintaan-kategori/reject', [PermintaanKategoriController::class, 'reject']);
 
         Route::get('/user', [UserController::class, 'index']);
         
