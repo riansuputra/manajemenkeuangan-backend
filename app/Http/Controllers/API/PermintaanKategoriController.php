@@ -19,9 +19,7 @@ class PermintaanKategoriController extends Controller
     public function index(Request $request)
     {
         try {
-            $permintaan = PermintaanKategori::where('user_id', $request->auth['user']['id'])
-                                        ->get();
-            // dd($permintaan);
+            $permintaan = PermintaanKategori::where('user_id', $request->auth['user']['id'])->get();
             return response()->json([
                 'message' => 'Berhasil mendapatkan daftar permintaan kategori.',
                 'auth' => $request->auth,
@@ -29,7 +27,6 @@ class PermintaanKategoriController extends Controller
                     'permintaan' => $permintaan
                 ],
             ], Response::HTTP_OK);
-
         } catch (Exception $e) {
             if($e instanceof ValidationException){
                 return response()->json([
@@ -49,17 +46,14 @@ class PermintaanKategoriController extends Controller
     public function indexAdmin(Request $request)
     {
         try {
-            $permintaan = new PermintaanKategori();
             $permintaan = PermintaanKategori::with(['user', 'admin'])->get();
-            
             return response()->json([
                 'message' => 'Berhasil mendapatkan daftar permintaan kategori.',
                 'auth' => $request->auth,
                 'data' => [
-                    'PermintaanKategori' => $permintaan
+                    'permintaan' => $permintaan
                 ],
             ], Response::HTTP_OK);
-
         } catch (Exception $e) {
             if($e instanceof ValidationException){
                 return response()->json([
@@ -97,7 +91,6 @@ class PermintaanKategoriController extends Controller
                 ],
                 'cakupan_kategori' => 'required|in:global,personal',
             ]);
-
             $existsGlobal = false;
             $existsPersonal = false;
             if ($request->tipe_kategori == 'pengeluaran') {
@@ -113,7 +106,6 @@ class PermintaanKategoriController extends Controller
                     ->where('user_id', $request->auth['user']['id'])
                     ->where('scope', $request->cakupan_kategori)->exists();
             }
-
             if ($existsGlobal && $existsPersonal) {
                 return response()->json(['message' => 'Kategori sudah ada untuk tipe kategori yang dipilih secara global dan personal.'], 422);
             } else if ($existsGlobal) {
@@ -123,12 +115,11 @@ class PermintaanKategoriController extends Controller
             }
 
             $nama = $request->cakupan_kategori == 'personal' ? $request->nama_kategori . ' (Personal)' : $request->nama_kategori;
-
             $admin = isset($request->auth['admin']['id']) ? $request->auth['admin']['id'] : 1;
 
             $permintaanKategori = PermintaanKategori::create([
                 'tipe_kategori' => $request->tipe_kategori,
-                'nama_kategori' => $nama,
+                'nama_kategori' => ucwords($nama),
                 'admin_id' => $admin,
                 'user_id' => $request->auth['user']['id'],
                 'scope' => $request->cakupan_kategori,
@@ -157,104 +148,95 @@ class PermintaanKategoriController extends Controller
         }
     }
 
-
     public function approve(Request $request, $id)
     {
         try{
-        $permintaan = PermintaanKategori::findOrFail($id);
-        if ($permintaan->status == 'approved') {
-            return response()->json(['message' => 'Category request already approved.'], 400);
-        }
+            $permintaan = PermintaanKategori::findOrFail($id);
+            if ($permintaan->status == 'approved') {
+                return response()->json(['message' => 'Permintaan kategori sudah disetujui.'], 400);
+            }
 
-        $permintaan->update([
-            'status' => 'approved',
-            'admin_id' => $request->auth['admin']['id'],
-        ]);
+            $permintaan->update([
+                'status' => 'approved',
+                'admin_id' => $request->auth['admin']['id'],
+            ]);
 
-        if ($permintaan->tipe_kategori == 'pengeluaran') {
-            KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $permintaan->nama_kategori]);
-        } else {
-            KategoriPemasukan::create(['nama_kategori_pemasukan' => $permintaan->nama_kategori]);
-        }
-
-        return response()->json(['message' => 'Category request approved successfully.']);
-    } catch (Exception $e) {
-        if ($e instanceof ValidationException) {
+            if ($permintaan->tipe_kategori == 'pengeluaran') {
+                KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $permintaan->nama_kategori]);
+            } else {
+                KategoriPemasukan::create(['nama_kategori_pemasukan' => $permintaan->nama_kategori]);
+            }
+            
             return response()->json([
-                'message' => $e->getMessage(),
+                'status' => 'success',
+                'message' => 'Permintaan kategori berhasil disetujui.',
                 'auth' => $request->auth,
-                'errors' =>  $e->validator->errors(),
-            ], Response::HTTP_BAD_REQUEST);
-        } else {
-            return response()->json([
-                'message' => $e->getMessage(),
-                'auth' => $request->auth
-            ], Response::HTTP_BAD_REQUEST);
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
         }
-    }
     }
 
     public function reject(Request $request, $id)
     {
         try{
-        $request->validate([
-            'message' => 'nullable',
-        ]);
+            $request->validate([
+                'message' => 'nullable',
+            ]);
 
-        $permintaan = PermintaanKategori::findOrFail($id);
-        if ($permintaan->status == 'rejected') {
-            return response()->json(['message' => 'Category request already rejected.'], 400);
-        }
+            $permintaan = PermintaanKategori::findOrFail($id);
+            if ($permintaan->status == 'rejected') {
+                return response()->json(['message' => 'Category request already rejected.'], 400);
+            }
 
-        $permintaan->update([
-            'status' => 'rejected',
-            'admin_id' => $request->auth['admin']['id'],
-        ]);
+            $permintaan->update([
+                'status' => 'rejected',
+                'admin_id' => $request->auth['admin']['id'],
+            ]);
 
-        return response()->json(['message' => 'Category request rejected successfully.']);
-    } catch (Exception $e) {
-        if ($e instanceof ValidationException) {
-            return response()->json([
-                'message' => $e->getMessage(),
-                'auth' => $request->auth,
-                'errors' =>  $e->validator->errors(),
-            ], Response::HTTP_BAD_REQUEST);
-        } else {
-            return response()->json([
-                'message' => $e->getMessage(),
-                'auth' => $request->auth
-            ], Response::HTTP_BAD_REQUEST);
+            return response()->json(['message' => 'Category request rejected successfully.']);
+        } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
         }
     }
-    }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(string $id)
     {
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
         //
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         //
