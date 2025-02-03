@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 
 class BeritaController extends Controller
 {
-    public function store()
+    public function store(Request $request)
     {
         try{
             $response = Http::acceptJson()
@@ -39,7 +39,6 @@ class BeritaController extends Controller
             }
 
             $paginatedRecords = Berita::paginate(10);
-            return response()->json($paginatedRecords);
             return response()->json([
                 'message' => 'Berhasil update data kurs.',
                 'auth' => $request->auth,

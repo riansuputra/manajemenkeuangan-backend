@@ -14,12 +14,17 @@ class KategoriPengeluaranController extends Controller
     public function index(Request $request) 
     {
         try {
-            $kategori_pengeluaran = KategoriPengeluaran::all();
+            $kategori_pengeluaran = KategoriPengeluaran::query();
+
+            if ($request->auth['user_type'] == 'user') {
+                $kategori_pengeluaran->where('user_id', $request->auth['user']['id'])
+                                ->orWhereNull('user_id');
+            }
             return response()->json([
                 'message' => 'Berhasil mendapatkan kategori pengeluaran.',
                 'auth' => $request->auth,
                 'data' => [
-                    'kategori_pengeluaran' => $kategori_pengeluaran
+                    'kategori_pengeluaran' => $kategori_pengeluaran->get()
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {

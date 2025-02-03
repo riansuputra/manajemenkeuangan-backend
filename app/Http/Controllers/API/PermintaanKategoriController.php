@@ -96,10 +96,15 @@ class PermintaanKategoriController extends Controller
                                 $existsApproved = \App\Models\KategoriPemasukan::whereRaw('LOWER(nama_kategori_pemasukan) = ?', [$namaKategori])->exists();
                             }
                         } elseif ($request->cakupan_kategori === 'personal') {
-                            // Cek kategori pribadi yang sudah di-approve
-                            $existsApproved = \App\Models\KategoriPribadi::whereRaw('LOWER(nama_kategori) = ?', [$namaKategori])
+                            if ($request->tipe_kategori === 'pengeluaran') {
+                                $existsApproved = \App\Models\KategoriPengeluaran::whereRaw('LOWER(nama_kategori_pengeluaran) = ?', [$namaKategori.' (Personal)'])
                                 ->where('user_id', $request->auth['user']['id'])
                                 ->exists();
+                            } elseif ($request->tipe_kategori === 'pemasukan') {
+                                $existsApproved = \App\Models\KategoriPemasukan::whereRaw('LOWER(nama_kategori_pemasukan) = ?', [$namaKategori.' (Personal)'])
+                                ->where('user_id', $request->auth['user']['id'])
+                                ->exists();
+                            }
                         }
             
                         if ($existsApproved) {
@@ -186,11 +191,11 @@ class PermintaanKategoriController extends Controller
             ]);
 
             if ($permintaan->scope == 'personal') {
-                KategoriPribadi::create([
-                    'nama_kategori' => $permintaan->nama_kategori,
-                    'user_id' => $permintaan->user_id,
-                    'tipe_kategori' => $permintaan->tipe_kategori,
-                ]);
+                if ($permintaan->tipe_kategori == 'pengeluaran') {
+                    KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $permintaan->nama_kategori, 'user_id' => $permintaan->user_id]);
+                } else {
+                    KategoriPemasukan::create(['nama_kategori_pemasukan' => $permintaan->nama_kategori, 'user_id' => $permintaan->user_id]);
+                }
             } else {
                 if ($permintaan->tipe_kategori == 'pengeluaran') {
                     KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $permintaan->nama_kategori]);

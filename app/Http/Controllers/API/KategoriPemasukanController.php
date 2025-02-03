@@ -14,12 +14,17 @@ class KategoriPemasukanController extends Controller
     public function index(Request $request) 
     {
         try {
-            $kategori_pemasukan = KategoriPemasukan::all();
+            $kategori_pemasukan = KategoriPemasukan::query();
+
+            if ($request->auth['user_type'] == 'user') {
+                $kategori_pemasukan->where('user_id', $request->auth['user']['id'])
+                                ->orWhereNull('user_id');
+            }
             return response()->json([
                 'message' => 'Berhasil mendapatkan kategori pemasukan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'kategori_pemasukan' => $kategori_pemasukan
+                    'kategori_pemasukan' => $kategori_pemasukan->get()
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {

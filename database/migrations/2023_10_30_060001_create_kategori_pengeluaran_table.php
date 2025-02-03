@@ -15,6 +15,7 @@ return new class extends Migration
     {
         Schema::create('kategori_pengeluaran', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->nullable()->constrained('user');
             $table->string('nama_kategori_pengeluaran');
             $table->timestamps();
         });

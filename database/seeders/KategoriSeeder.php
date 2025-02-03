@@ -17,7 +17,7 @@ class KategoriSeeder extends Seeder
      */
     public function run(): void
     {
-        $pemasukans = ['Uang Saku', ' Upah', 'Bonus', 'Lainnya'];
+        $pemasukans = ['Uang Saku', 'Upah', 'Bonus', 'Lainnya'];
         $pengeluarans = ['Makanan', 'Minuman', 'Tagihan', 'Shopping', 'Kesehatan & Olahraga', 'Lainnya'];
         $now = Carbon::now();
 
