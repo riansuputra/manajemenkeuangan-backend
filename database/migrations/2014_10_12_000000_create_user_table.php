@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('email_verification_code')->nullable();
             $table->string('password');
             $table->string('api_token', 80)->unique()->nullable()->default(null);
+            $table->text('alamat')->nullable();
+            $table->string('no_telp', 20)->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

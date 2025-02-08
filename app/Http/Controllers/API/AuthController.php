@@ -150,6 +150,86 @@ class AuthController extends Controller
         return redirect('http://localhost:8001/login')->with('message', 'Email Anda berhasil diverifikasi! Sekarang Anda bisa login.');
     }
 
+    public function lupa_password_admin(Request $request) {
+        $validated = $request->validate([
+            'email' => 'required|string|max:100|email:rfc,dns|exists:App\Models\Admin,email',
+            'kode_verifikasi' => 'required',
+            'password_baru' => 'required|string|min:8|max:20|same:konfirmasi_password_baru',
+            'konfirmasi_password_baru' => 'required|string|min:8|max:20|same:password_baru'
+        ]);
+        try{
+            DB::beginTransaction();
+            $admin = Admin::where('email', $request->email)->first();
+            $admin->password = Hash::make($request->password_baru);
+            $now = Carbon::now()->timezone(env('APP_TIMEZONE'));
+            $verifikasi_akun = VerifikasiAkun::where('email', $request->email)
+                ->where('user', 'Admin')
+                ->where('jenis', 'Ganti Password')
+                ->where('diverifikasi', null)
+                ->where('kode', $request->kode_verifikasi)
+                ->where('kadaluarsa', '>=', $now)
+                ->first();
+            if(!empty($verifikasi_akun)){
+                $verifikasi_akun->diverifikasi = $now;
+                $verifikasi_akun->save();
+            }else{
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Kode verifikasi tidak sesuai atau sudah kadaluarsa. Silahkan mengirimkan ulang kode verifikasi.',
+                ], Response::HTTP_NOT_FOUND);
+            }
+            $admin->save();
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Berhasil ganti password akun admin toko. Silahkan masuk sebagai admin toko.',
+            ], Response::HTTP_OK);
+        }catch(Exception $e){
+            DB::rollback();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal ganti password akun admin toko.'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'password' => 'required',
+            'new_password' => [
+                'required', 'string', 'min:8', 'max:20', 'same:konfirmasi_password',
+                'different:password'
+            ],
+            'konfirmasi_password' => 'required|string|same:new_password',
+        ]);
+
+        $user = $request->auth['user']['id'];
+
+        if (!Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Password yang Anda masukkan salah. Silakan coba lagi.',
+                'errors' => ['password' => 'Password tidak sesuai.']
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Simpan password baru
+        $user->password = Hash::make($validated['new_password']);
+        $user->save();
+
+        $user = $this->user($user);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password berhasil diperbarui.',
+            'auth' => [
+                'user_type' => 'user',
+                'user' => $user,
+                'token' => $user->api_token,
+            ]
+        ], Response::HTTP_OK);
+    }
+
     public function loginUser(Request $request)
     {
         $validated = $request->validate([

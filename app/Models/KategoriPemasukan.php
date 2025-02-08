@@ -20,4 +20,8 @@ class KategoriPemasukan extends Model
     {
         return $this->hasMany(Pemasukan::class, 'kategori_pemasukan_id', 'id');
     }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
 }

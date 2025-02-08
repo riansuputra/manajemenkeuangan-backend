@@ -47,6 +47,7 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         
         Route::post('/kirim-verifikasi', [AuthController::class, 'sendTestEmail']);
         Route::get('/verifikasi-email/{code}', [AuthController::class, 'verifyEmail']);
+        Route::post('/lupa-password', [AuthController::class, 'lupaPassword']);
     });
 
     Route::middleware([AdminUserMiddleware::class])->group(function () {
@@ -116,6 +117,13 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         Route::post('/portofolio-beli', [PortofolioBeliController::class, 'storeWeb']);
         Route::get('/portofolio-beli', [PortofolioBeliController::class, 'indexWeb']);
         Route::apiResource('portofoliojual', PortofolioJualController::class);
+
+        Route::delete('/hapus-portofolio', [UserController::class, 'destroyPortofolio']);
+        Route::delete('/hapus-keuangan', [UserController::class, 'destroyKeuangan']);
+        Route::delete('/hapus-catatan', [UserController::class, 'destroyCatatan']);
+        Route::post('/update-password', [AuthController::class, 'updatePassword']);
+
+        Route::post('/update', [UserController::class, 'update']);
 
         
         
