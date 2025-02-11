@@ -70,6 +70,8 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         Route::apiResource('sekuritas', SekuritasController::class);
         Route::apiResource('historis', HistorisController::class);
         
+        Route::get('/transaksi-all', [TransaksiController::class, 'indexAll']);
+
         Route::get('/mutasi-dana', [MutasiDanaController::class, 'index']);
         Route::apiResource('saldo', SaldoController::class);
         Route::post('/topup', [SaldoController::class, 'topup']);

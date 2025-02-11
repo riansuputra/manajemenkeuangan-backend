@@ -19,6 +19,33 @@ use Illuminate\Validation\ValidationException;
 
 class TransaksiController extends Controller
 {
+    public function indexAll(Request $request)
+    {
+        try {
+            $transaksi = Transaksi::all();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan transaksi semua.',
+                'auth' => $request->auth,
+                'data' => [
+                    'transaksi' => $transaksi
+                ],
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+    
     public function store(Request $request)
     {
         try {
@@ -34,6 +61,7 @@ class TransaksiController extends Controller
                 $harga = $request->input('harga');
                 $totalHarga = $volume * $harga;
                 $asetId = $request->input('aset_id');
+                $sekuritasId = $request->input('sekuritas');
 
                 // Cek saldo user
                 $saldoUser = Saldo::where('user_id', $userId)->sum('saldo');
@@ -110,6 +138,7 @@ class TransaksiController extends Controller
                     'harga' => $harga,
                     'aset_id' => $asetId,
                     'deskripsi' => 'Beli Aset '.$asetId,
+                    'sekuritas_id' => $sekuritasId ?? null,
                 ]);
                 
                 if ($portofolio) {
@@ -239,6 +268,7 @@ class TransaksiController extends Controller
                 $harga = $request->input('harga'); // Jual menggunakan avg price
                 $totalHarga = $volume * $harga;
                 $asetId = $request->input('aset_id');
+                $sekuritasId = $request->input('sekuritas');
                 // Ambil portofolio terakhir berdasarkan aset
                 $portofolio = Portofolio::where('user_id', $userId)
                     ->where('aset_id', $asetId)
@@ -315,6 +345,7 @@ class TransaksiController extends Controller
                         'harga' => $harga,
                         'aset_id' => $asetId,
                         'deskripsi' => 'Beli Aset '.$asetId,
+                        'sekuritas_id' => $sekuritasId ?? null,
                     ]);
 
                     
