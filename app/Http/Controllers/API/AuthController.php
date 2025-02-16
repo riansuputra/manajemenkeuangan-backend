@@ -73,6 +73,15 @@ class AuthController extends Controller
                 'message' => 'Masuk tidak diijinkan saat terautentikasi.',
             ], Response::HTTP_FORBIDDEN);
         }
+        if (!Hash::check($validated['password'], $admin->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Password yang Anda masukkan salah. Silakan coba lagi.',
+                'errors' => [
+                    'password' => 'Password tidak sesuai.'
+                ]
+            ], Response::HTTP_UNAUTHORIZED);
+        }
         $admin->api_token = Str::random(60);
         $admin->save();
         return response()->json([

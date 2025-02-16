@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;
 use Exception;
+use Illuminate\Validation\Rule;
 
 class KategoriPengeluaranController extends Controller
 {
@@ -47,7 +48,12 @@ class KategoriPengeluaranController extends Controller
     {
         try{
             $request->validate([
-                'nama_kategori_pengeluaran' => 'required',
+                'nama_kategori_pengeluaran' => [
+                    'required', 
+                    'string', 
+                    'max:100',
+                    Rule::unique('kategori_pengeluaran')
+                ],
             ]);
             $kategori_pengeluaran = new KategoriPengeluaran();
             $kategori_pengeluaran->nama_kategori_pengeluaran = $request->nama_kategori_pengeluaran;

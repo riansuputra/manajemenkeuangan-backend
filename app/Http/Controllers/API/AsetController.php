@@ -51,7 +51,7 @@ class AsetController extends Controller
             return response()->json([
                 'message' => 'Berhasil input data kas ke tabel aset.',
                 'auth' => $request->auth,
-            ], Response::HTTP_OK);    
+            ], Response::HTTP_CREATED);    
         } catch (Exception $e) {
             if ($e instanceof ValidationException) {
                 return response()->json([
@@ -95,7 +95,7 @@ class AsetController extends Controller
             return response()->json([
                 'message' => 'Berhasil input data saham ke tabel aset.',
                 'auth' => $request->auth,
-            ], Response::HTTP_OK);    
+            ], Response::HTTP_CREATED);    
         } catch (Exception $e) {
             if ($e instanceof ValidationException) {
                 return response()->json([
@@ -189,7 +189,7 @@ class AsetController extends Controller
             return response()->json([
                 'message' => 'Berhasil input data saham ke tabel aset.',
                 'auth' => $request->auth,
-            ], Response::HTTP_OK);    
+            ], Response::HTTP_CREATED);    
         } catch (Exception $e) {
             if ($e instanceof ValidationException) {
                 return response()->json([
@@ -1119,7 +1119,7 @@ class AsetController extends Controller
             return response()->json([
                 'message' => 'Berhasil input data bank ke tabel aset.',
                 'auth' => $request->auth,
-            ], Response::HTTP_OK);    
+            ], Response::HTTP_CREATED);    
         } catch (Exception $e) {
             if ($e instanceof ValidationException) {
                 return response()->json([

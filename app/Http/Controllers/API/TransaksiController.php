@@ -69,7 +69,7 @@ class TransaksiController extends Controller
                     return response()->json([
                         'error' => 'Saldo tidak mencukupi',
                         'message' => 'Saldo tidak mencukupi'
-                    ], 400);
+                    ], Response::HTTP_BAD_REQUEST);
                 }
 
                 // Kurangi saldo user
@@ -279,11 +279,11 @@ class TransaksiController extends Controller
                     return response()->json([
                         'error' => 'Portofolio tidak ditemukan untuk aset tersebut.',
                         'message' => 'Portofolio tidak ditemukan untuk aset tersebut.',
-                    ], 404);
+                    ], Response::HTTP_BAD_REQUEST);
                 }
 
                 if ($volume > $portofolio->volume) {
-                    return response()->json(['error' => 'Volume jual melebihi volume yang ada.'], 404);
+                    return response()->json(['error' => 'Volume jual melebihi volume yang ada.'], Response::HTTP_NOT_FOUND);
                 } else {                   
 
                     $kinerjaPortofolioTerakhir = KinerjaPortofolio::where('user_id', $userId)
@@ -474,7 +474,7 @@ class TransaksiController extends Controller
                     ->value('total_value');
 
             } else {
-                return response()->json(['error' => 'Portofolio tidak ditemukan untuk aset tersebut.'], 404);
+                return response()->json(['error' => 'Portofolio tidak ditemukan untuk aset tersebut.'], Response::HTTP_NOT_FOUND);
 
             }
 
@@ -543,9 +543,20 @@ class TransaksiController extends Controller
                     'kinerja_portofolio' => KinerjaPortofolio::latest('id')->first(),
                     'historis' => $historis,
                 ],
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            ], Response::HTTP_OK);
+        } catch (Exception $e) { 
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
         }
     }
 
@@ -601,10 +612,21 @@ class TransaksiController extends Controller
                 'tipe_mutasi' => 'update_harga',
             ]);
 
-            return response()->json(['message' => 'Current price berhasil diperbarui.'], 200);
+            return response()->json(['message' => 'Current price berhasil diperbarui.'], Response::HTTP_OK);
 
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (Exception $e) { 
+            if($e instanceof ValidationException){
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' =>  $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            }else{
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
         }
     }
 

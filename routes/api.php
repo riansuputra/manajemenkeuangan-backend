@@ -136,7 +136,7 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         
         
         Route::get('/permintaan-kategori-admin', [PermintaanKategoriController::class, 'indexAdmin']);
-        Route::post('/permintaan-kategori/{id}/approve', [PermintaanKategoriController::class, 'approve']);
+        Route::post('/permintaan-kategori/approve', [PermintaanKategoriController::class, 'approve']);
         Route::post('/permintaan-kategori/reject', [PermintaanKategoriController::class, 'reject']);
 
         Route::get('/user', [UserController::class, 'index']);

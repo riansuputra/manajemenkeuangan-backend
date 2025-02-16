@@ -119,7 +119,7 @@ class SekuritasController extends Controller
                 'data' => [
                     'sekuritas' => $sekuritas
                 ],
-            ], Response::HTTP_CREATED);
+            ], Response::HTTP_OK);
         } catch (Exception $e) {
             if($e instanceof ValidationException){
                 return response()->json([

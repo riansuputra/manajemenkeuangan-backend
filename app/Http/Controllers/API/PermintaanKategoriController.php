@@ -177,26 +177,28 @@ class PermintaanKategoriController extends Controller
         }
     }
 
-    public function approve(Request $request, $id)
+    public function approve(Request $request)
     {
         try{
-            $permintaan = PermintaanKategori::findOrFail($id);
+            $permintaan = PermintaanKategori::findOrFail($request->id);
             if ($permintaan->status == 'approved') {
                 return response()->json(['message' => 'Permintaan kategori sudah disetujui.'], 400);
             }
 
             $permintaan->update([
                 'status' => 'approved',
+                'scope' => $request->scope,
                 'admin_id' => $request->auth['admin']['id'],
+                'message' => $request->message,
             ]);
 
-            if ($permintaan->scope == 'personal') {
+            if ($request->scope == 'personal') {
                 if ($permintaan->tipe_kategori == 'pengeluaran') {
                     KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $permintaan->nama_kategori, 'user_id' => $permintaan->user_id]);
                 } else {
                     KategoriPemasukan::create(['nama_kategori_pemasukan' => $permintaan->nama_kategori, 'user_id' => $permintaan->user_id]);
                 }
-            } else {
+            } else if ($request->scope == 'global'){
                 if ($permintaan->tipe_kategori == 'pengeluaran') {
                     KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $permintaan->nama_kategori]);
                 } else {
@@ -208,7 +210,7 @@ class PermintaanKategoriController extends Controller
                 'status' => 'success',
                 'message' => 'Permintaan kategori berhasil disetujui.',
                 'auth' => $request->auth,
-            ]);
+            ], Response::HTTP_OK);
         } catch (Exception $e) {
             if ($e instanceof ValidationException) {
                 return response()->json([
@@ -249,7 +251,7 @@ class PermintaanKategoriController extends Controller
                 'status' => 'success',
                 'message' => 'Permintaan kategori berhasil ditolak.',
                 'auth' => $request->auth,
-            ], Response::HTTP_CREATED);
+            ], Response::HTTP_OK);
         } catch (Exception $e) {
             if ($e instanceof ValidationException) {
                 return response()->json([

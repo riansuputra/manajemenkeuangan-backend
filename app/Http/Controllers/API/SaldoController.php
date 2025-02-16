@@ -44,7 +44,7 @@ class SaldoController extends Controller
                 'auth' => $request->auth,
                 'status' => 'error',
                 'message' => 'Tipe saldo tidak valid.',
-            ], 400);
+            ], Response::HTTP_BAD_REQUEST);
 
         } catch (\Exception $e) {
             if ($e instanceof ValidationException) {
@@ -241,13 +241,13 @@ class SaldoController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Saldo tidak mencukupi.',
-            ], 400);
+            ], Response::HTTP_BAD_REQUEST);
         } else if ($jumlahSaldo == $totalSaldo) {
             $maksimalWd = number_format(($jumlahSaldo - 1), 0, ',', '.');
             return response()->json([
                 'status' => 'warning',
                 'message' => 'Maksimal withdraw saldo adalah Rp. '.$maksimalWd,
-            ], 400);
+            ], Response::HTTP_BAD_REQUEST);
         }
 
         $jumlahSaldo = -abs($jumlahSaldo);
@@ -770,7 +770,7 @@ class SaldoController extends Controller
         return response()->json([
             'status' => 'error',
             'message' => 'Tipe saldo tidak valid.',
-        ], 400);
+        ], Response::HTTP_BAD_REQUEST);
     }
 
 

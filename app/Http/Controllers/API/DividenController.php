@@ -117,7 +117,7 @@ class DividenController extends Controller
 
     public function edit(Dividen $dividen)
     {
-        
+        //
     }
 
     public function update(Request $request, Dividen $dividen)

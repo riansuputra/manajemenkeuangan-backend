@@ -130,7 +130,7 @@ class BeritaController extends Controller
     }
 
     public function update() {
-    
+        //
     }
 
     public function destroy(Berita $berita)
