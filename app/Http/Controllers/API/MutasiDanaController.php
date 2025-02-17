@@ -14,7 +14,7 @@ class MutasiDanaController extends Controller
 {
     public function index(Request $request) {
         try {
-            $mutasi = new Saldo();
+            $mutasi = new MutasiDana();
             if($request->auth['user_type'] == 'user') {
                 $mutasi = $mutasi->where('user_id', $request->auth['user']['id']);
             }

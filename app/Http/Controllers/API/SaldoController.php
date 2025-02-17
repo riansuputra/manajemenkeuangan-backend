@@ -221,7 +221,7 @@ class SaldoController extends Controller
         return response()->json([
             'status' => 'success',
             'auth' => $request->auth,
-            'message' => 'Top-up saldo berhasil diproses.',
+            'message' => 'Berhasil melakukan top-up dana.',
             'data' => [
                 'saldo' => $saldoBaru,
                 'transaksi' => $transaksiBaru,
@@ -245,7 +245,7 @@ class SaldoController extends Controller
         } else if ($jumlahSaldo == $totalSaldo) {
             $maksimalWd = number_format(($jumlahSaldo - 1), 0, ',', '.');
             return response()->json([
-                'status' => 'warning',
+                'status' => 'error',
                 'message' => 'Maksimal withdraw saldo adalah Rp. '.$maksimalWd,
             ], Response::HTTP_BAD_REQUEST);
         }
@@ -406,7 +406,7 @@ class SaldoController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Withdraw saldo berhasil diproses.',
+            'message' => 'Berhasil melakukan withdraw dana.',
             'auth' => $request->auth,
             'data' => [
                 'saldo' => $saldoBaru,
@@ -586,7 +586,7 @@ class SaldoController extends Controller
         return response()->json([
             'status' => 'success',
             'auth' => $request->auth,
-            'message' => 'Top-up dividen berhasil diproses.',
+            'message' => 'Berhasil melakukan top-up dividen.',
             'data' => [
                 'saldo' => $saldoBaru,
                 'transaksi' => $transaksiBaru,
@@ -757,7 +757,7 @@ class SaldoController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Top-up saldo berhasil diproses.',
+                'message' => 'Berhasil melakukan top-up dana.',
                 'data' => [
                     'saldo' => $saldoBaru,
                     'transaksi' => $transaksiBaru,
@@ -1154,7 +1154,7 @@ class SaldoController extends Controller
                 // jika tipe saldo keluar dan jumlah saldo keluar lebih sedikit dari total saldo yang ada
                 } else if ($request->tipe_saldo == 'keluar' && $request->saldo > $total_saldo) {
                     return response()->json([
-                        'message' => 'Dana tidak cukup.'
+                        'message' => 'Dana tidak mencukupi.'
                     ], Response::HTTP_BAD_REQUEST);
 
                 // jika tipe saldo adalah dividen

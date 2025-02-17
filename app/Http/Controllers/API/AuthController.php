@@ -86,7 +86,7 @@ class AuthController extends Controller
         $admin->save();
         return response()->json([
             'status' => 'success',
-            'message' => 'Masuk sebagai admin berhasil.',
+            'message' => 'Berhasil masuk sebagai admin.',
             'auth' => [
                 'user_type' => 'admin',
                 'admin' => $admin,
@@ -279,7 +279,7 @@ class AuthController extends Controller
         $user = $this->user($user);
         return response()->json([
             'status' => 'success',
-            'message' => 'Masuk sebagai user berhasil.',
+            'message' => 'Berhasil masuk sebagai user.',
             'auth' => [
                 'user_type' => 'user',
                 'user' => $user,
@@ -295,7 +295,7 @@ class AuthController extends Controller
                 $user = $this->user($user);
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'user terautentikasi.',
+                    'message' => 'User terautentikasi.',
                     'auth' => [
                         'user_type' => 'user',
                         'user' => $user,

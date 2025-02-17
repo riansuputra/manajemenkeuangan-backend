@@ -199,10 +199,11 @@ class PermintaanKategoriController extends Controller
                     KategoriPemasukan::create(['nama_kategori_pemasukan' => $permintaan->nama_kategori, 'user_id' => $permintaan->user_id]);
                 }
             } else if ($request->scope == 'global'){
+                $namaKategori = preg_replace('/\s?\(.*\)$/', '', $permintaan->nama_kategori);
                 if ($permintaan->tipe_kategori == 'pengeluaran') {
-                    KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $permintaan->nama_kategori]);
+                    KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $namaKategori]);
                 } else {
-                    KategoriPemasukan::create(['nama_kategori_pemasukan' => $permintaan->nama_kategori]);
+                    KategoriPemasukan::create(['nama_kategori_pemasukan' => $namaKategori]);
                 }
             }
             
