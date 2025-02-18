@@ -81,7 +81,8 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         Route::get('/berita/store', [BeritaController::class, 'store']);
         Route::get('/berita', [BeritaController::class, 'index']);
 
-        Route::post('/permintaan-kategori-store', [PermintaanKategoriController::class, 'store']);
+        Route::post('/permintaan-kategori/store', [PermintaanKategoriController::class, 'store']);
+        Route::post('/permintaan-kategori/update/{id}', [PermintaanKategoriController::class, 'update']);
         Route::get('/permintaan-kategori', [PermintaanKategoriController::class, 'index']);
 
         Route::delete('/hapus-portofolio', [UserController::class, 'destroyPortofolio']);
