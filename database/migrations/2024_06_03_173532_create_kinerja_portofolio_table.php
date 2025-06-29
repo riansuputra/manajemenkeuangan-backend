@@ -13,13 +13,16 @@ return new class extends Migration
     {
         Schema::create('kinerja_portofolio', function (Blueprint $table) {
             $table->id();
+            $table->uuid('kode_grup_transaksi')->nullable()->index();
             $table->foreignId('user_id')->constrained('user');
             $table->foreignId('transaksi_id')->constrained('transaksi');
-            $table->bigInteger('valuasi_saat_ini')->nullable();
-            $table->decimal('yield', 10, 2)->nullable();
-            $table->integer('ihsg_start')->nullable(); 
-            $table->integer('ihsg_end')->nullable();
-            $table->decimal('yield_ihsg', 10, 2)->nullable();
+            $table->date('tanggal');
+            $table->decimal('valuasi_saat_ini', 30, 4)->nullable();
+            $table->decimal('yield', 10, 6)->nullable();
+            $table->decimal('yield_realisasi', 10, 6)->nullable();
+            $table->decimal('ihsg_start', 15, 2)->nullable(); 
+            $table->decimal('ihsg_end', 15, 2)->nullable();
+            $table->decimal('yield_ihsg', 15, 2)->nullable();
             $table->timestamps();
         });
     }

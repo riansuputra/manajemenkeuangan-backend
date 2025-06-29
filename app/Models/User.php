@@ -83,5 +83,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(KategoriPengeluaran::class, 'user_id', 'id');
     }
+    public function perubahan_harga()
+    {
+        return $this->hasMany(PerubahanHarga::class, 'user_id', 'id');
+    }
     
 }

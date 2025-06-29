@@ -17,6 +17,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('user');
             $table->string('nama_kategori_pemasukan');
+            $table->string('nama_kategori_pemasukan_en')->nullable();
             $table->timestamps();
         });
     }

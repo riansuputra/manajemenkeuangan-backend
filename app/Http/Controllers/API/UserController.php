@@ -107,9 +107,11 @@ class UserController extends Controller
             DB::table('portofolio')->where('user_id', $userId)->delete();
             DB::table('kinerja_portofolio')->where('user_id', $userId)->delete();
             DB::table('mutasi_dana')->where('user_id', $userId)->delete();
-            DB::table('transaksi')->where('user_id', $userId)->delete();
             DB::table('saldo')->where('user_id', $userId)->delete();
+            DB::table('transaksi')->where('user_id', $userId)->delete();
             DB::table('historis')->where('user_id', $userId)->delete();
+            DB::table('perubahan_harga')->where('user_id', $userId)->delete();
+            DB::table('tutup_buku')->where('user_id', $userId)->delete();
 
             DB::commit();
 

@@ -11,16 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transaksi', function (Blueprint $table) {
+        Schema::create('saldo', function (Blueprint $table) {
             $table->id();
+            $table->uuid('kode_grup_transaksi')->nullable()->index();
             $table->foreignId('user_id')->constrained('user');
-            $table->foreignId('aset_id')->constrained('aset');
-            $table->foreignId('sekuritas_id')->nullable()->constrained('sekuritas');
-            $table->enum('jenis_transaksi', ['beli', 'jual', 'deposit', 'tarik', 'dividen', 'kas']);
+            $table->foreignId('transaksi_id')->constrained('transaksi');
             $table->date('tanggal');
-            $table->bigInteger('volume')->nullable();
-            $table->bigInteger('harga')->nullable();
-            $table->string('deskripsi')->nullable();
+            $table->enum('tipe_saldo', ['masuk', 'dividen', 'keluar']);
+            $table->decimal('saldo', 30, 2);
             $table->timestamps();
         });
     }
@@ -30,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transaksi');
+        Schema::dropIfExists('saldo');
     }
 };

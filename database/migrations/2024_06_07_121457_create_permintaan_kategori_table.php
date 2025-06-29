@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('admin_id')->constrained('admin')->nullable();
             $table->enum('tipe_kategori', ['pemasukan', 'pengeluaran']);
             $table->string('nama_kategori');
+            $table->string('nama_kategori_en')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->enum('scope', ['global', 'personal'])->default('global');
             $table->text('message')->nullable();

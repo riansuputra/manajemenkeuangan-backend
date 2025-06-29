@@ -283,30 +283,33 @@ class PermintaanKategoriController extends Controller
     public function approve(Request $request)
     {
         try{
+            // dd($request);
             $permintaan = PermintaanKategori::findOrFail($request->id);
             if ($permintaan->status == 'approved') {
                 return response()->json(['message' => 'Permintaan kategori sudah disetujui.'], 400);
             }
-
+            // dd($permintaan->nama_kategori_en);
             $permintaan->update([
                 'status' => 'approved',
                 'scope' => $request->scope,
                 'admin_id' => $request->auth['admin']['id'],
                 'message' => $request->message,
             ]);
-
+            // dd($permintaan->nama_kategori);
             if ($request->scope == 'personal') {
                 if ($permintaan->tipe_kategori == 'pengeluaran') {
-                    KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $permintaan->nama_kategori, 'user_id' => $permintaan->user_id]);
+                    KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $request->nama_kategori, 'nama_kategori_pengeluaran_en' => $request->nama_kategori_en, 'user_id' => $permintaan->user_id]);
                 } else {
-                    KategoriPemasukan::create(['nama_kategori_pemasukan' => $permintaan->nama_kategori, 'user_id' => $permintaan->user_id]);
+                    KategoriPemasukan::create(['nama_kategori_pemasukan' => $request->nama_kategori, 'nama_kategori_pemasukan_en' => $request->nama_kategori_en, 'user_id' => $permintaan->user_id]);
                 }
             } else if ($request->scope == 'global'){
-                $namaKategori = preg_replace('/\s?\(.*\)$/', '', $permintaan->nama_kategori);
+                $namaKategori = preg_replace('/\s?\(.*\)$/', '', $request->nama_kategori);
+                $namaKategoriEn = preg_replace('/\s?\(.*\)$/', '', $request->nama_kategori_en);
+                // dd($namaKategori, $namaKategoriEn);
                 if ($permintaan->tipe_kategori == 'pengeluaran') {
-                    KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $namaKategori]);
+                    KategoriPengeluaran::create(['nama_kategori_pengeluaran' => $namaKategori, 'nama_kategori_pengeluaran_en' => $namaKategoriEn]);
                 } else {
-                    KategoriPemasukan::create(['nama_kategori_pemasukan' => $namaKategori]);
+                    KategoriPemasukan::create(['nama_kategori_pemasukan' => $namaKategori, 'nama_kategori_pemasukan_en' => $namaKategoriEn]);
                 }
             }
             

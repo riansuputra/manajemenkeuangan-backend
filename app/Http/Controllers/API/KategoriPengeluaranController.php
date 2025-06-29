@@ -25,7 +25,14 @@ class KategoriPengeluaranController extends Controller
                 'message' => 'Berhasil mendapatkan kategori pengeluaran.',
                 'auth' => $request->auth,
                 'data' => [
-                    'kategori_pengeluaran' => $kategori_pengeluaran->get()
+                    'kategori_pengeluaran' => $kategori_pengeluaran->get()->map(function($item) {
+                        return [
+                            'id' => $item->id,
+                            'user_id' => $item->user_id,
+                            'nama_kategori_pengeluaran' => $item->nama_kategori, // field dinamis dari accessor
+                            // Tambahkan field lain jika perlu
+                        ];
+                    })
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {

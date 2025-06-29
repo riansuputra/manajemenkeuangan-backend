@@ -112,6 +112,8 @@ class AuthController extends Controller
             'konfirmasiPassword.same' => 'Konfirmasi password dan password harus sesuai.',
         ]);
 
+        Log::info('Validation result:', $validated);
+
         $code = Str::random(60);
         $userData = [
             'email' => $request->email,
@@ -125,17 +127,18 @@ class AuthController extends Controller
             $user = User::create($userData);
             DB::commit();
 
-            // Mail::send('emails.verify', ['code' => $code, 'name' => $user->name], function ($message) use ($user) {
-            //     $message->to($user->email);
-            //     $message->subject('Verifikasi Email Anda');
-            // });
+            Mail::send('emails.verify', ['code' => $code, 'email' => $user->email], function ($message) use ($user) {
+                $message->to($user->email);
+                $message->subject('Verifikasi Email Anda');
+            });
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Berhasil daftar akun. Silakan melakukan login.',
+                'message' => 'Berhasil daftar akun. Silakan verifikasi terlebih dahulu sebelum login.',
             ], Response::HTTP_CREATED);
         } catch (Exception $e) {
             DB::rollback();
+            Log::error('Error during user registration: ' . $e->getMessage());
             return response()->json([
                 'status' => 'error',
                 'message' => 'Gagal daftar akun user.',
@@ -144,20 +147,224 @@ class AuthController extends Controller
         }
     }
 
-    public function verifyEmail($code)
+    public function resendVerification(Request $request)
     {
-        $user = User::where('email_verification_code', $code)->first();
+        try {
+            $request->validate([
+                'email' => 'required|string|exists:user,email',
+            ]);
 
-        if (!$user) {
-            return redirect('/')->with('error', 'Token verifikasi tidak valid.');
+            $user = User::where('email', $request->email)->first();
+            if ($user->email_verified_at) {
+                return back()->with('info', 'Email sudah diverifikasi.');
+            }
+
+            $code = Str::random(60);
+            $user->email_verification_code = $code;
+            $user->save();
+
+            Mail::send('emails.verify', ['code' => $code, 'email' => $user->email], function ($message) use ($user) {
+                $message->to($user->email);
+                $message->subject('Verifikasi Email Anda');
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Berhasil kirim ulang verifikasi. Silakan verifikasi terlebih dahulu sebelum login.',
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            DB::rollback();
+            Log::error('Error during user resend verification: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal kirim ulang verifikasi.',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $user->email_verified_at = now();
-        $user->email_verification_code = null;
-        $user->save();
-
-        return redirect('http://localhost:8001/login')->with('message', 'Email Anda berhasil diverifikasi! Sekarang Anda bisa login.');
     }
+
+    public function sendResetLink(Request $request)
+    {
+        try {
+            $request->validate(['email' => 'required|email|exists:user,email']);
+
+            $user = User::where('email', $request->email)->first();
+
+            // // Cek apakah email sudah diverifikasi
+            // if (is_null($user->email_verified_at)) {
+            //     return response()->json([
+            //         'status' => 'error',
+            //         'message' => 'Email Anda belum diverifikasi. Silakan verifikasi terlebih dahulu.',
+            //     ], Response::HTTP_FORBIDDEN);
+            // }
+
+            $token = Str::random(60);
+            $expiresAt = Carbon::now()->addMinutes(30);
+
+            $user->update([
+                'password_reset_token' => $token,
+                'password_reset_expires_at' => $expiresAt
+            ]);
+
+            $resetLink = 'http://localhost:8001/reset-password/' . $token;
+
+            Mail::send('emails.change_password', ['token' => $resetLink, 'email' => $user->email], function ($message) use ($user) {
+                $message->to($user->email);
+                $message->subject('Reset Password Anda');
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Link reset password telah dikirim ke email Anda.',
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            Log::error('Error during user reset password: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal kirim reset link user.',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    public function resendResetLink(Request $request)
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email|exists:user,email',
+            ]);
+
+            $user = User::where('email', $request->email)->first();
+
+            // // Cek apakah email sudah diverifikasi
+            // if (is_null($user->email_verified_at)) {
+            //     return response()->json([
+            //         'status' => 'error',
+            //         'message' => 'Email Anda belum diverifikasi. Silakan verifikasi terlebih dahulu.',
+            //     ], Response::HTTP_FORBIDDEN);
+            // }
+
+            $now = Carbon::now();
+            $token = $user->password_reset_token;
+            $expiresAt = $user->password_reset_expires_at;
+
+            if (!$token || !$expiresAt || $now->gt($expiresAt)) {
+                $token = Str::random(60);
+                $expiresAt = $now->addMinutes(30);
+
+                $user->update([
+                    'password_reset_token' => $token,
+                    'password_reset_expires_at' => $expiresAt
+                ]);
+            }
+
+            $resetLink = 'http://localhost:8001/reset-password?token=' . $token;
+
+            Mail::send('emails.change_password', ['token' => $resetLink, 'email' => $user->email], function ($message) use ($user) {
+                $message->to($user->email);
+                $message->subject('Reset Password Anda (Permintaan Ulang)');
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Link reset password telah dikirim ulang ke email Anda.',
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            Log::error('Error during resend reset password: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengirim ulang reset password.',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
+
+    public function verifyEmail(Request $request, $code)
+    {
+        try {
+            $user = User::where('email_verification_code', $request->code)->first();
+    
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Token verifikasi tidak valid atau sudah digunakan.'
+                ], 400);
+            }
+    
+            if ($user->email_verified_at) {
+                return response()->json([
+                    'status' => 'info',
+                    'message' => 'Email sudah diverifikasi sebelumnya. Silakan login.'
+                ]);
+            }
+    
+            DB::beginTransaction();
+            $user->email_verified_at = now();
+            $user->email_verification_code = null;
+            $user->save();
+            DB::commit();
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Email Anda berhasil diverifikasi! Sekarang Anda bisa login.'
+            ]);
+    
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Error during email verification: ' . $e->getMessage());
+    
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat memverifikasi email.'
+            ], 500);
+        }
+    }
+
+    public function verifyPassword(Request $request, $token)
+    {
+        $request->validate([
+            'password' => 'required|min:8',
+        ]);
+    
+        $user = User::where('password_reset_token', $token)
+                    ->where('password_reset_expires_at', '>', now())
+                    ->first();
+    
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Token tidak valid atau sudah kadaluarsa.'
+            ], 400);
+        }
+    
+        DB::beginTransaction();
+        try {
+            $user->password = bcrypt($request->password);
+            $user->password_reset_token = null;
+            $user->password_reset_expires_at = null;
+            $user->save();
+    
+            DB::commit();
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Password berhasil diubah. Silakan login dengan password baru Anda.'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error during password reset: ' . $e->getMessage());
+    
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat mengganti password.'
+            ], 500);
+        }
+    }
+
 
     public function lupa_password_admin(Request $request) {
         $validated = $request->validate([
@@ -272,6 +479,13 @@ class AuthController extends Controller
                     'email' => 'Email tidak ditemukan.',
                     'password' => 'Password salah.'
                 ]
+            ], Response::HTTP_FORBIDDEN);
+        }
+        if (is_null($user->email_verified_at)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Akun belum diverifikasi. Silakan cek email untuk verifikasi.',
+                'errors' => ['email' => 'Akun belum diverifikasi.']
             ], Response::HTTP_FORBIDDEN);
         }
         $user->api_token = Str::random(60);

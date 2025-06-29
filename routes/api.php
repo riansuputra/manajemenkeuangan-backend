@@ -40,8 +40,13 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         Route::post('/admin/register', [AuthController::class, 'registerAdmin']);
         
         Route::post('/kirim-verifikasi', [AuthController::class, 'sendTestEmail']);
-        Route::get('/verifikasi-email/{code}', [AuthController::class, 'verifyEmail']);
+        Route::post('/verifikasi-email/{code}', [AuthController::class, 'verifyEmail']);
+        Route::post('/kirim-ulang-verifikasi', [AuthController::class, 'resendVerification']);
+        
         Route::post('/lupa-password', [AuthController::class, 'lupaPassword']);
+        Route::post('/password/lupa', [AuthController::class, 'sendResetLink']);
+        Route::post('/kirim-ulang-konfirmasi', [AuthController::class, 'resendResetLink']);
+        Route::post('/konfirmasi-password/{token}', [AuthController::class, 'verifyPassword']);
     });
 
     Route::middleware([AdminUserMiddleware::class])->group(function () {
@@ -61,6 +66,7 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         Route::apiResource('transaksi', TransaksiController::class);
         Route::get('/transaksi-all', [TransaksiController::class, 'indexAll']);
         Route::post('/update-price', [TransaksiController::class, 'updatePrice']);
+        Route::post('/updateBeli', [TransaksiController::class, 'updateBeli']);
         Route::post('/store-jual', [TransaksiController::class, 'storeJual']);
 
         Route::get('/mutasi-dana', [MutasiDanaController::class, 'index']);
@@ -72,6 +78,7 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         Route::get('/kinerja-portofolio', [PortofolioController::class, 'kinerja']);
 
         Route::apiResource('aset', AsetController::class);
+        Route::get('/aset-harga', [AsetController::class, 'indexHarga']);
         Route::post('/aset/store-kas', [AsetController::class, 'storeKas']);
         Route::post('/aset/store-ewallet', [AsetController::class, 'storeEwallet']);
         Route::post('/aset/store-bank', [AsetController::class, 'storeBank']);
@@ -90,6 +97,11 @@ Route::middleware([ApiKeyMiddleware::class, 'throttle:100,1'])->group(function (
         Route::delete('/hapus-catatan', [UserController::class, 'destroyCatatan']);
         Route::post('/update-password', [AuthController::class, 'updatePassword']);
         Route::post('/update', [UserController::class, 'update']);
+
+        Route::delete('/delete-portofolio/{id}', [TransaksiController::class, 'destroyPortofolio']);
+        Route::post('/tutup-buku/{id}', [TransaksiController::class, 'tutupBuku']);
+        Route::get('/tutup-buku', [TransaksiController::class, 'indexTutupBuku']);
+
     });
     
     Route::middleware([AdminMiddleware::class])->group(function () {

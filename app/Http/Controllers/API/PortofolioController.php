@@ -15,6 +15,7 @@ use App\Models\HistorisBulanan;
 use App\Models\HistorisTahunan;
 use App\Models\User;
 use App\Models\Sekuritas;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;

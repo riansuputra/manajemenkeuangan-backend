@@ -14,17 +14,39 @@ class PemasukanController extends Controller
     public function index(Request $request) 
     {
         try {
-            $pemasukan = new Pemasukan();
-            if($request->auth['user_type'] == 'user') {
-                $pemasukan = $pemasukan->where('user_id', $request->auth['user']['id']);
+            $pemasukan = Pemasukan::query();
+
+            if ($request->auth['user_type'] == 'user') {
+                $pemasukan->where('user_id', $request->auth['user']['id']);
             }
-            $pemasukan = $pemasukan->with('kategori_pemasukan')
-                                   ->get();
+
+            $pemasukan = $pemasukan->with('kategori_pemasukan')->get();
+
+            $result = $pemasukan->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'user_id' => $item->user_id,
+                    'kategori_pemasukan_id' => $item->kategori_pemasukan_id,
+                    'tanggal' => $item->tanggal,
+                    'jumlah' => $item->jumlah,
+                    'catatan' => $item->catatan,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'kategori_pemasukan' => $item->kategori_pemasukan ? [
+                        'id' => $item->kategori_pemasukan->id,
+                        'user_id' => $item->kategori_pemasukan->user_id,
+                        'nama_kategori_pemasukan' => $item->kategori_pemasukan->nama_kategori,
+                        'created_at' => $item->kategori_pemasukan->created_at,
+                        'updated_at' => $item->kategori_pemasukan->updated_at,
+                    ] : null
+                ];
+            });
+
             return response()->json([
                 'message' => 'Berhasil mendapatkan pemasukan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pemasukan' => $pemasukan
+                    'pemasukan' => $result
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {

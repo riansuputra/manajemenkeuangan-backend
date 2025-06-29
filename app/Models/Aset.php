@@ -29,4 +29,8 @@ class Aset extends Model
     {
         return $this->hasMany(JualSaham::class, 'aset_id', 'id');
     }
+    public function perubahan_harga()
+    {
+        return $this->hasMany(PerubahanHarga::class, 'user_id', 'id');
+    }
 }

@@ -17,7 +17,7 @@ use App\Http\Controllers\API\AuthController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('emails.change_password');
 });
 
 Route::get('/updatestock', [StockAPIController::class, 'updateStock']);

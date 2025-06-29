@@ -13,14 +13,16 @@ return new class extends Migration
     {
         Schema::create('mutasi_dana', function (Blueprint $table) {
             $table->id();
+            $table->uuid('kode_grup_transaksi')->nullable()->index();
             $table->foreignId('user_id')->constrained('user');
             $table->integer('tahun');
             $table->tinyInteger('bulan');
-            $table->bigInteger('modal')->nullable();
-            $table->bigInteger('harga_unit')->nullable();
-            $table->bigInteger('harga_unit_saat_ini')->nullable();
-            $table->bigInteger('jumlah_unit_penyertaan')->nullable();
-            $table->bigInteger('alur_dana')->nullable();
+            $table->decimal('modal', 30, 2)->nullable();
+            $table->decimal('harga_unit', 20, 4)->nullable();
+            $table->decimal('harga_unit_saat_ini', 20, 4)->nullable();
+            $table->decimal('jumlah_unit_penyertaan', 20, 6)->nullable();
+            $table->decimal('alur_dana', 30, 2)->nullable();
+            $table->boolean('dari_tutup_buku')->default(false);
             $table->timestamps();
         });
     }

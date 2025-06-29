@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string('api_token', 80)->unique()->nullable()->default(null);
             $table->text('alamat')->nullable();
             $table->string('no_telp', 20)->nullable();
+            $table->string('password_reset_token')->nullable();
+            $table->timestamp('password_reset_expires_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

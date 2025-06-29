@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use Exception;
 use App\Models\Aset;
+use App\Models\PerubahanHarga;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,34 @@ class AsetController extends Controller
                 'auth' => $request->auth,
                 'data' => [
                     'aset' => $aset
+                ],
+            ], Response::HTTP_OK);    
+        } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth,
+                    'errors' => $e->validator->errors(),
+                ], Response::HTTP_BAD_REQUEST);
+            } else {
+                Log::error('Error in index method: ' . $e->getMessage());
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'auth' => $request->auth
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+    }
+
+    public function indexHarga(Request $request) {
+        try {
+            $harga = PerubahanHarga::where('user_id', $request->auth['user']['id'])->with('aset')->get();
+            // dd($harga);
+            return response()->json([
+                'message' => 'Berhasil mendapatkan daftar perubahan harga.',
+                'auth' => $request->auth,
+                'data' => [
+                    'harga' => $harga
                 ],
             ], Response::HTTP_OK);    
         } catch (Exception $e) {

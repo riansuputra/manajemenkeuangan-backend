@@ -14,17 +14,39 @@ class PengeluaranController extends Controller
     public function index(Request $request) 
     {
         try {
-            $pengeluaran = new Pengeluaran();
-            if($request->auth['user_type'] == 'user') {
-                $pengeluaran = $pengeluaran->where('user_id', $request->auth['user']['id']);
+            $pengeluaran = Pengeluaran::query();
+
+            if ($request->auth['user_type'] == 'user') {
+                $pengeluaran->where('user_id', $request->auth['user']['id']);
             }
-            $pengeluaran = $pengeluaran->with('kategori_pengeluaran')
-                                   ->get();
+
+            $pengeluaran = $pengeluaran->with('kategori_pengeluaran')->get();
+
+            $result = $pengeluaran->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'user_id' => $item->user_id,
+                    'kategori_pengeluaran_id' => $item->kategori_pengeluaran_id,
+                    'tanggal' => $item->tanggal,
+                    'jumlah' => $item->jumlah,
+                    'catatan' => $item->catatan,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'kategori_pengeluaran' => $item->kategori_pengeluaran ? [
+                        'id' => $item->kategori_pengeluaran->id,
+                        'user_id' => $item->kategori_pengeluaran->user_id,
+                        'nama_kategori_pengeluaran' => $item->kategori_pengeluaran->nama_kategori,
+                        'created_at' => $item->kategori_pengeluaran->created_at,
+                        'updated_at' => $item->kategori_pengeluaran->updated_at,
+                    ] : null
+                ];
+            });
+
             return response()->json([
                 'message' => 'Berhasil mendapatkan pengeluaran.',
                 'auth' => $request->auth,
                 'data' => [
-                    'pengeluaran' => $pengeluaran
+                    'pengeluaran' => $result
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {

@@ -9,9 +9,11 @@ use App\Models\MutasiDana;
 use App\Models\KinerjaPortofolio;
 use App\Models\Portofolio;
 use App\Models\Historis;
+use Illuminate\Support\Str;
 use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -19,10 +21,13 @@ class SaldoController extends Controller
 {
     public function topUp(Request $request)
     {
-        try {
+        DB::beginTransaction();
 
+        try {
             $request->validate([
                 'saldo' => 'required|integer|min:1',
+                'tipe_saldo' => 'required|in:masuk,keluar,dividen',
+                'tanggal' => 'required|date',
             ]);
             
             $userId = $request->auth['user']['id'];
@@ -30,23 +35,23 @@ class SaldoController extends Controller
             $tipeSaldo = $request->input('tipe_saldo');
             $asetId = $request->input('aset_id');
             $tanggal = $request->input('tanggal');
-            
 
             if ($tipeSaldo === 'masuk') {
-                return $this->handleSaldoMasuk($request, $userId, $jumlahSaldo, $tanggal);
+                $response = $this->handleSaldoMasuk($request, $userId, $jumlahSaldo, $tanggal);
             } elseif ($tipeSaldo === 'keluar') {
-                return $this->handleSaldoKeluar($request, $userId, $jumlahSaldo, $tanggal);
+                $response = $this->handleSaldoKeluar($request, $userId, $jumlahSaldo, $tanggal);
             } elseif ($tipeSaldo === 'dividen') {
-                return $this->handleSaldoDividen($request, $userId, $jumlahSaldo, $tanggal, $asetId);
+                $response = $this->handleSaldoDividen($request, $userId, $jumlahSaldo, $tanggal, $asetId);
+            } else {
+                throw new \Exception('Tipe saldo tidak valid.');
             }
 
-            return response()->json([
-                'auth' => $request->auth,
-                'status' => 'error',
-                'message' => 'Tipe saldo tidak valid.',
-            ], Response::HTTP_BAD_REQUEST);
+            DB::commit();
+            return $response;
 
         } catch (\Exception $e) {
+            DB::rollBack();
+
             if ($e instanceof ValidationException) {
                 return response()->json([
                     'message' => $e->getMessage(),
@@ -64,11 +69,14 @@ class SaldoController extends Controller
 
     private function handleSaldoMasuk(Request $request, $userId, $jumlahSaldo, $tanggal)
     {
+        $kodeGrup = Str::uuid();
+
         $tahun = date('Y', strtotime($tanggal));
         $bulan = date('n', strtotime($tanggal));
         // Tambahkan data ke Transaksi
         $transaksiBaru = Transaksi::create([
             'user_id' => $userId,
+            'kode_grup_transaksi' => $kodeGrup,
             'aset_id' => 1, // ID aset untuk "kas"
             'jenis_transaksi' => 'kas',
             'tanggal' => $tanggal,
@@ -98,19 +106,20 @@ class SaldoController extends Controller
 
         // Jika belum ada data mutasi dana untuk tahun ini
         if (!$mutasiDanaTerakhir || $mutasiDanaTerakhir->tahun < $tahun) {
-            $modalBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
+            $modalBaru = optional($kinerjaPortofolioTerakhir)->valuasi_saat_ini + $jumlahSaldo;
             $hargaUnitLama = $mutasiDanaTerakhir->harga_unit_saat_ini ?? 1000;
 
-            $jumlahUnitPenyertaanBaru = ceil(
+            $jumlahUnitPenyertaanBaru = round(
                 $modalBaru / $hargaUnitLama
-            );
+            , 4);
 
-            $hargaUnitSaatIni = ceil(
+            $hargaUnitSaatIni = round(
                 $modalBaru / $jumlahUnitPenyertaanBaru
-            );
+            , 4);
 
             $mutasiDanaBaru = MutasiDana::create([
                 'user_id' => $userId,
+                'kode_grup_transaksi' => $kodeGrup,
                 'tahun' => $tahun,
                 'bulan' => $bulan,
                 'modal' => $modalBaru,
@@ -124,6 +133,8 @@ class SaldoController extends Controller
             $valuasiSaatIniBaru = $modalBaru;
             $kinerjaPortofolioBaru = KinerjaPortofolio::create([
                 'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'kode_grup_transaksi' => $kodeGrup,
                 'transaksi_id' => $transaksiBaru->id, // ID transaksi akan diisi setelah transaksi dibuat
                 'valuasi_saat_ini' => $valuasiSaatIniBaru,
                 'yield' => 0.00,
@@ -132,6 +143,7 @@ class SaldoController extends Controller
             // Tambahkan data ke Historis
             if (!$historisTerkait) {
                 Historis::create([
+                    'kode_grup_transaksi' => $kodeGrup,
                     'user_id' => $userId,
                     'tahun' => $tahun,
                     'bulan' => $bulan,
@@ -139,6 +151,7 @@ class SaldoController extends Controller
                 ]);
             } else {
                 $historisTerkait->update([
+                    'kode_grup_transaksi' => $kodeGrup,
                     'yield' => 0.00,
                 ]);
             }
@@ -146,6 +159,8 @@ class SaldoController extends Controller
             // Tambahkan data ke Portofolio
             Portofolio::create([
                 'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'kode_grup_transaksi' => $kodeGrup,
                 'aset_id' => 1, // ID aset untuk "kas"
                 'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
                 'volume' => 1,
@@ -155,15 +170,20 @@ class SaldoController extends Controller
         } else {
             // Jika sudah ada data mutasi dana untuk tahun ini
             $modalLama = $mutasiDanaTerakhir->modal;
-            $hargaUnitSaatIni = ceil(
-                ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / ($mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0)
-            );
+            // $hargaUnitSaatIni = ceil(
+            //     ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / ($mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0)
+            // );
+            $jumlahUnitPenyertaan = $mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0;
+            $hargaUnitSaatIni = $jumlahUnitPenyertaan > 0
+                ? round(($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $jumlahUnitPenyertaan, 4)
+                : 1000;
             $hargaUnit = $mutasiDanaTerakhir->harga_unit;
 
             $jumlahUnitPenyertaanBaru = ($jumlahSaldo / $hargaUnitSaatIni) + $mutasiDanaTerakhir->jumlah_unit_penyertaan;
 
             $mutasiDanaBaru = MutasiDana::create([
                 'user_id' => $userId,
+                'kode_grup_transaksi' => $kodeGrup,
                 'tahun' => $tahun,
                 'bulan' => $bulan,
                 'modal' => $modalLama,
@@ -179,6 +199,8 @@ class SaldoController extends Controller
 
             $kinerjaPortofolioBaru = KinerjaPortofolio::create([
                 'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'kode_grup_transaksi' => $kodeGrup,
                 'transaksi_id' => $transaksiBaru->id, // ID transaksi akan ditambahkan di bawah
                 'valuasi_saat_ini' => $valuasiSaatIniBaru,
                 'yield' => $yield,
@@ -188,10 +210,12 @@ class SaldoController extends Controller
             if ($historisTerkait) {
                 $historisTerkait->update([
                     'yield' => $yield,
+                    'kode_grup_transaksi' => $kodeGrup,
                 ]);
             } else {
                 Historis::create([
                     'user_id' => $userId,
+                    'kode_grup_transaksi' => $kodeGrup,
                     'tahun' => $tahun,
                     'bulan' => $bulan,
                     'yield' => $yield,
@@ -203,6 +227,7 @@ class SaldoController extends Controller
 
             Portofolio::create([
                 'user_id' => $userId,
+                'tanggal' => $tanggal,
                 'aset_id' => 1, // ID aset untuk "kas"
                 'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
                 'volume' => 1,
@@ -213,6 +238,8 @@ class SaldoController extends Controller
         // Tambahkan data ke Saldo
         $saldoBaru = Saldo::create([
             'user_id' => $userId,
+            'kode_grup_transaksi' => $kodeGrup,
+            'transaksi_id' => $transaksiBaru->id,
             'tanggal' => $tanggal,
             'tipe_saldo' => 'masuk',
             'saldo' => $jumlahSaldo,
@@ -233,6 +260,8 @@ class SaldoController extends Controller
 
     private function handleSaldoKeluar(Request $request, $userId, $jumlahSaldo, $tanggal)
     {
+        $kodeGrup = Str::uuid();
+
         $tahun = date('Y', strtotime($tanggal));
         $bulan = date('n', strtotime($tanggal));
         // Validasi saldo cukup
@@ -255,6 +284,7 @@ class SaldoController extends Controller
         // Tambahkan data ke Transaksi
         $transaksiBaru = Transaksi::create([
             'user_id' => $userId,
+            'kode_grup_transaksi' => $kodeGrup,
             'aset_id' => 1, // ID aset untuk "kas"
             'jenis_transaksi' => 'kas',
             'tanggal' => $tanggal,
@@ -287,16 +317,17 @@ class SaldoController extends Controller
             $modalBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
             $hargaUnitLama = $mutasiDanaTerakhir->harga_unit_saat_ini ?? 1000;
 
-            $jumlahUnitPenyertaanBaru = ceil(
+            $jumlahUnitPenyertaanBaru = round(
                 $modalBaru / $hargaUnitLama
-            );
+            , 4);
 
-            $hargaUnitSaatIni = ceil(
+            $hargaUnitSaatIni = round(
                 $modalBaru / $jumlahUnitPenyertaanBaru
-            );
+            , 4);
 
             $mutasiDanaBaru = MutasiDana::create([
                 'user_id' => $userId,
+                'kode_grup_transaksi' => $kodeGrup,
                 'tahun' => $tahun,
                 'bulan' => $bulan,
                 'modal' => $modalBaru,
@@ -310,6 +341,8 @@ class SaldoController extends Controller
             $valuasiSaatIniBaru = $modalBaru;
             $kinerjaPortofolioBaru = KinerjaPortofolio::create([
                 'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'kode_grup_transaksi' => $kodeGrup,
                 'transaksi_id' => $transaksiBaru->id, // ID transaksi akan diisi setelah transaksi dibuat
                 'valuasi_saat_ini' => $valuasiSaatIniBaru,
                 'yield' => 0.00,
@@ -319,6 +352,7 @@ class SaldoController extends Controller
             if (!$historisTerkait) {
                 Historis::create([
                     'user_id' => $userId,
+                    'kode_grup_transaksi' => $kodeGrup,
                     'tahun' => $tahun,
                     'bulan' => $bulan,
                     'yield' => 0.00,
@@ -326,12 +360,15 @@ class SaldoController extends Controller
             } else {
                 $historisTerkait->update([
                     'yield' => 0.00,
+                    'kode_grup_transaksi' => $kodeGrup,
                 ]);
             }
 
             // Tambahkan data ke Portofolio
             Portofolio::create([
                 'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'kode_grup_transaksi' => $kodeGrup,
                 'aset_id' => 1, // ID aset untuk "kas"
                 'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
                 'volume' => 1,
@@ -342,14 +379,20 @@ class SaldoController extends Controller
             // Jika sudah ada data mutasi dana untuk tahun ini
             $modalLama = $mutasiDanaTerakhir->modal;
             $hargaUnit = $mutasiDanaTerakhir->harga_unit;
-            $hargaUnitSaatIni = ceil(
-                ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $mutasiDanaTerakhir->jumlah_unit_penyertaan
-            );
+            // $hargaUnitSaatIni = ceil(
+            //     ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $mutasiDanaTerakhir->jumlah_unit_penyertaan
+            // );
+
+            $jumlahUnitPenyertaan = $mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0;
+            $hargaUnitSaatIni = $jumlahUnitPenyertaan > 0
+                ? round(($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $jumlahUnitPenyertaan, 4)
+                : 1000;
 
             $jumlahUnitPenyertaanBaru = ($jumlahSaldo / $hargaUnitSaatIni) + $mutasiDanaTerakhir->jumlah_unit_penyertaan;
 
             $mutasiDanaBaru = MutasiDana::create([
                 'user_id' => $userId,
+                'kode_grup_transaksi' => $kodeGrup,
                 'tahun' => $tahun,
                 'bulan' => $bulan,
                 'modal' => $modalLama,
@@ -365,6 +408,8 @@ class SaldoController extends Controller
 
             $kinerjaPortofolioBaru = KinerjaPortofolio::create([
                 'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'kode_grup_transaksi' => $kodeGrup,
                 'transaksi_id' => $transaksiBaru->id, // ID transaksi akan ditambahkan di bawah
                 'valuasi_saat_ini' => $valuasiSaatIniBaru,
                 'yield' => $yield,
@@ -374,10 +419,12 @@ class SaldoController extends Controller
             if ($historisTerkait) {
                 $historisTerkait->update([
                     'yield' => $yield,
+                    'kode_grup_transaksi' => $kodeGrup,
                 ]);
             } else {
                 Historis::create([
                     'user_id' => $userId,
+                    'kode_grup_transaksi' => $kodeGrup,
                     'tahun' => $tahun,
                     'bulan' => $bulan,
                     'yield' => $yield,
@@ -389,6 +436,8 @@ class SaldoController extends Controller
 
             Portofolio::create([
                 'user_id' => $userId,
+                'tanggal' => $tanggal,
+                'kode_grup_transaksi' => $kodeGrup,
                 'aset_id' => 1, // ID aset untuk "kas"
                 'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
                 'volume' => 1,
@@ -399,6 +448,8 @@ class SaldoController extends Controller
         // Tambahkan data ke Saldo
         $saldoBaru = Saldo::create([
             'user_id' => $userId,
+            'kode_grup_transaksi' => $kodeGrup,
+            'transaksi_id' => $transaksiBaru->id,
             'tanggal' => $tanggal,
             'tipe_saldo' => 'keluar',
             'saldo' => $jumlahSaldo,
@@ -419,165 +470,32 @@ class SaldoController extends Controller
 
     private function handleSaldoDividen(Request $request, $userId, $jumlahSaldo, $tanggal, $asetId)
     {
+        $kodeGrup = Str::uuid();
+
         $tahun = date('Y', strtotime($tanggal));
         $bulan = date('n', strtotime($tanggal));
-        // Tambahkan data ke Transaksi
-        $transaksiBaru = Transaksi::create([
-            'user_id' => $userId,
-            'aset_id' => 1, // ID aset untuk "kas"
-            'jenis_transaksi' => 'kas',
-            'tanggal' => $tanggal,
-            'volume' => 1,
-            'harga' => $jumlahSaldo,
-            'deskripsi' => 'Top-up dividen',
-        ]);
 
-        $transaksiBaruAset = Transaksi::create([
-            'user_id' => $userId,
-            'aset_id' => $asetId, // ID aset untuk "kas"
-            'jenis_transaksi' => 'dividen',
-            'tanggal' => $tanggal,
-            'volume' => 1,
-            'harga' => $jumlahSaldo,
-            'deskripsi' => 'Top-up dividen',
-        ]);
+        // Tambahkan data ke Transaksi
+        $transaksiBaru = $this->createTransaksi($userId, 1, 'kas', $tanggal, $jumlahSaldo, 'Top-up dividen');
+        $transaksiBaruAset = $this->createTransaksi($userId, $asetId, 'dividen', $tanggal, $jumlahSaldo, 'Top-up dividen');
 
         // Data pendukung
-        $mutasiDanaTerakhir = MutasiDana::where('user_id', $userId)
-            ->orderByDesc('id')
-            ->first();
+        $mutasiDanaTerakhir = MutasiDana::where('user_id', $userId)->orderByDesc('id')->first();
+        $kinerjaPortofolioTerakhir = KinerjaPortofolio::where('user_id', $userId)->orderByDesc('id')->first();
+        $portofolioTerakhir = Portofolio::where('user_id', $userId)->where('aset_id', 1)->orderByDesc('id')->first();
+        $historisTerkait = Historis::where('user_id', $userId)->where('tahun', $tahun)->where('bulan', $bulan)->first();
 
-        $kinerjaPortofolioTerakhir = KinerjaPortofolio::where('user_id', $userId)
-            ->orderByDesc('id')
-            ->first();
-
-        $portofolioTerakhir = Portofolio::where('user_id', $userId)
-            ->where('aset_id', 1) // ID aset untuk "kas"
-            ->orderByDesc('id')
-            ->first();
-
-        $historisTerkait = Historis::where('user_id', $userId)
-            ->where('tahun', $tahun)
-            ->where('bulan', $bulan)
-            ->first();
-
-        // Jika belum ada data mutasi dana untuk tahun ini
         if (!$mutasiDanaTerakhir || $mutasiDanaTerakhir->tahun < $tahun) {
-            $modalBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
-            $hargaUnitLama = $mutasiDanaTerakhir->harga_unit_saat_ini ?? 1000;
-
-            $jumlahUnitPenyertaanBaru = ceil(
-                $modalBaru / $hargaUnitLama
-            );
-
-            $hargaUnitSaatIni = ceil(
-                $modalBaru / $jumlahUnitPenyertaanBaru
-            );
-
-            $mutasiDanaBaru = MutasiDana::create([
-                'user_id' => $userId,
-                'tahun' => $tahun,
-                'bulan' => $bulan,
-                'modal' => $modalBaru,
-                'harga_unit' => $hargaUnitSaatIni,
-                'harga_unit_saat_ini' => $hargaUnitSaatIni,
-                'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
-                'alur_dana' => $jumlahSaldo,
-            ]);
-
-            // Tambahkan data ke Kinerja Portofolio
-            $valuasiSaatIniBaru = $modalBaru;
-            $kinerjaPortofolioBaru = KinerjaPortofolio::create([
-                'user_id' => $userId,
-                'transaksi_id' => $transaksiBaru->id, // ID transaksi akan diisi setelah transaksi dibuat
-                'valuasi_saat_ini' => $valuasiSaatIniBaru,
-                'yield' => 0.00,
-            ]);
-
-            // Tambahkan data ke Historis
-            if (!$historisTerkait) {
-                Historis::create([
-                    'user_id' => $userId,
-                    'tahun' => $tahun,
-                    'bulan' => $bulan,
-                    'yield' => 0.00,
-                ]);
-            } else {
-                $historisTerkait->update([
-                    'yield' => 0.00,
-                ]);
-            }
-
-            // Tambahkan data ke Portofolio
-            Portofolio::create([
-                'user_id' => $userId,
-                'aset_id' => 1, // ID aset untuk "kas"
-                'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
-                'volume' => 1,
-                'cur_price' => $valuasiSaatIniBaru,
-            ]);
-
+            $this->handleNewYearMutasiDana($userId, $tanggal, $tahun, $bulan, $jumlahSaldo, $kinerjaPortofolioTerakhir, $mutasiDanaTerakhir, $transaksiBaru, $historisTerkait);
         } else {
-            // Jika sudah ada data mutasi dana untuk tahun ini
-            $modalLama = $mutasiDanaTerakhir->modal;
-            $hargaUnitSaatIni = ceil(
-                ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / ($mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0)
-            );
-            $hargaUnit = $mutasiDanaTerakhir->harga_unit;
-
-            $jumlahUnitPenyertaanBaru = ($jumlahSaldo / $hargaUnitSaatIni) + $mutasiDanaTerakhir->jumlah_unit_penyertaan;
-
-            $mutasiDanaBaru = MutasiDana::create([
-                'user_id' => $userId,
-                'tahun' => $tahun,
-                'bulan' => $bulan,
-                'modal' => $modalLama,
-                'harga_unit' => $hargaUnit,
-                'harga_unit_saat_ini' => $hargaUnitSaatIni,
-                'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
-                'alur_dana' => $jumlahSaldo,
-            ]);
-
-            // Tambahkan data ke Kinerja Portofolio
-            $valuasiSaatIniBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
-            $yield = round(($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1) * 100, 2);
-
-            $kinerjaPortofolioBaru = KinerjaPortofolio::create([
-                'user_id' => $userId,
-                'transaksi_id' => $transaksiBaru->id, // ID transaksi akan ditambahkan di bawah
-                'valuasi_saat_ini' => $valuasiSaatIniBaru,
-                'yield' => $yield,
-            ]);
-
-            // Update atau tambahkan data ke Historis
-            if ($historisTerkait) {
-                $historisTerkait->update([
-                    'yield' => $yield,
-                ]);
-            } else {
-                Historis::create([
-                    'user_id' => $userId,
-                    'tahun' => $tahun,
-                    'bulan' => $bulan,
-                    'yield' => $yield,
-                ]);
-            }
-
-            // Tambahkan data ke Portofolio
-            $curPriceBaru = ($portofolioTerakhir->cur_price ?? 0) + $jumlahSaldo;
-
-            Portofolio::create([
-                'user_id' => $userId,
-                'aset_id' => 1, // ID aset untuk "kas"
-                'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
-                'volume' => 1,
-                'cur_price' => $curPriceBaru,
-            ]);
+            $this->handleExistingYearMutasiDana($userId, $tanggal, $tahun, $bulan, $jumlahSaldo, $kinerjaPortofolioTerakhir, $mutasiDanaTerakhir, $transaksiBaru, $historisTerkait, $portofolioTerakhir);
         }
 
         // Tambahkan data ke Saldo
         $saldoBaru = Saldo::create([
             'user_id' => $userId,
+            'transaksi_id' => $transaksiBaru->id,
+            'kode_grup_transaksi' => $kodeGrup,
             'tanggal' => $tanggal,
             'tipe_saldo' => 'masuk',
             'saldo' => $jumlahSaldo,
@@ -594,6 +512,128 @@ class SaldoController extends Controller
                 'kinerja_portofolio' => $kinerjaPortofolioBaru ?? null,
             ],
         ], Response::HTTP_CREATED);
+    }
+
+    private function createTransaksi($userId, $asetId, $jenisTransaksi, $tanggal, $jumlahSaldo, $deskripsi)
+    {
+        $kodeGrup = Str::uuid();
+
+        return Transaksi::create([
+            'user_id' => $userId,
+            'kode_grup_transaksi' => $kodeGrup,
+            'aset_id' => $asetId,
+            'jenis_transaksi' => $jenisTransaksi,
+            'tanggal' => $tanggal,
+            'volume' => 1,
+            'harga' => $jumlahSaldo,
+            'deskripsi' => $deskripsi,
+        ]);
+    }
+
+    private function handleNewYearMutasiDana($userId, $tanggal, $tahun, $bulan, $jumlahSaldo, $kinerjaPortofolioTerakhir, $mutasiDanaTerakhir, $transaksiBaru, $historisTerkait)
+    {
+        $modalBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
+        $hargaUnitLama = $mutasiDanaTerakhir->harga_unit_saat_ini ?? 1000;
+
+        $jumlahUnitPenyertaanBaru = round($modalBaru / $hargaUnitLama, 4);
+        $hargaUnitSaatIni = round($modalBaru / $jumlahUnitPenyertaanBaru, 4);
+
+        $mutasiDanaBaru = MutasiDana::create([
+            'user_id' => $userId,
+            'tahun' => $tahun,
+            'bulan' => $bulan,
+            'modal' => $modalBaru,
+            'harga_unit' => $hargaUnitSaatIni,
+            'harga_unit_saat_ini' => $hargaUnitSaatIni,
+            'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
+            'alur_dana' => $jumlahSaldo,
+        ]);
+
+        $valuasiSaatIniBaru = $modalBaru;
+        $kinerjaPortofolioBaru = KinerjaPortofolio::create([
+            'user_id' => $userId,
+            'tanggal' => $tanggal,
+            'transaksi_id' => $transaksiBaru->id,
+            'valuasi_saat_ini' => $valuasiSaatIniBaru,
+            'yield' => 0.00,
+        ]);
+
+        if (!$historisTerkait) {
+            Historis::create([
+                'user_id' => $userId,
+                'tahun' => $tahun,
+                'bulan' => $bulan,
+                'yield' => 0.00,
+            ]);
+        } else {
+            $historisTerkait->update(['yield' => 0.00]);
+        }
+
+        Portofolio::create([
+            'user_id' => $userId,
+            'tanggal' => $tanggal,
+            'aset_id' => 1,
+            'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
+            'volume' => 1,
+            'cur_price' => $valuasiSaatIniBaru,
+        ]);
+    }
+
+    private function handleExistingYearMutasiDana($userId, $tanggal, $tahun, $bulan, $jumlahSaldo, $kinerjaPortofolioTerakhir, $mutasiDanaTerakhir, $transaksiBaru, $historisTerkait, $portofolioTerakhir)
+    {
+        $modalLama = $mutasiDanaTerakhir->modal;
+        // $hargaUnitSaatIni = ceil(($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / ($mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0));
+        $jumlahUnitPenyertaan = $mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0;
+        $hargaUnitSaatIni = $jumlahUnitPenyertaan > 0
+            ? round(($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $jumlahUnitPenyertaan, 4)
+            : 1000;
+        $hargaUnit = $mutasiDanaTerakhir->harga_unit;
+
+        $jumlahUnitPenyertaanBaru = ($jumlahSaldo / $hargaUnitSaatIni) + $mutasiDanaTerakhir->jumlah_unit_penyertaan;
+
+        $mutasiDanaBaru = MutasiDana::create([
+            'user_id' => $userId,
+            'tahun' => $tahun,
+            'bulan' => $bulan,
+            'modal' => $modalLama,
+            'harga_unit' => $hargaUnit,
+            'harga_unit_saat_ini' => $hargaUnitSaatIni,
+            'jumlah_unit_penyertaan' => $jumlahUnitPenyertaanBaru,
+            'alur_dana' => $jumlahSaldo,
+        ]);
+
+        $valuasiSaatIniBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
+        $yield = round(($hargaUnitSaatIni - ($mutasiDanaTerakhir->harga_unit ?? 0)) / ($mutasiDanaTerakhir->harga_unit ?? 1) * 100, 2);
+
+        $kinerjaPortofolioBaru = KinerjaPortofolio::create([
+            'user_id' => $userId,
+            'tanggal' => $tanggal,
+            'transaksi_id' => $transaksiBaru->id,
+            'valuasi_saat_ini' => $valuasiSaatIniBaru,
+            'yield' => $yield,
+        ]);
+
+        if ($historisTerkait) {
+            $historisTerkait->update(['yield' => $yield]);
+        } else {
+            Historis::create([
+                'user_id' => $userId,
+                'tahun' => $tahun,
+                'bulan' => $bulan,
+                'yield' => $yield,
+            ]);
+        }
+
+        $curPriceBaru = ($portofolioTerakhir->cur_price ?? 0) + $jumlahSaldo;
+
+        Portofolio::create([
+            'user_id' => $userId,
+            'aset_id' => 1,
+            'tanggal' => $tanggal,
+            'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
+            'volume' => 1,
+            'cur_price' => $curPriceBaru,
+        ]);
     }
 
     public function topUp1(Request $request)
@@ -641,13 +681,13 @@ class SaldoController extends Controller
                 $modalBaru = ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) + $jumlahSaldo;
                 $hargaUnitLama = $mutasiDanaTerakhir->harga_unit ?? 1000;
     
-                $jumlahUnitPenyertaanBaru = ceil(
+                $jumlahUnitPenyertaanBaru = round(
                     $modalBaru / $hargaUnitLama
-                );
+                , 4);
     
-                $hargaUnitSaatIni = ceil(
+                $hargaUnitSaatIni = round(
                     $modalBaru / $jumlahUnitPenyertaanBaru
-                );
+                , 4);
     
                 $mutasiDanaBaru = MutasiDana::create([
                     'user_id' => $userId,
@@ -663,6 +703,7 @@ class SaldoController extends Controller
                 $valuasiSaatIniBaru = $modalBaru;
                 $kinerjaPortofolioBaru = KinerjaPortofolio::create([
                     'user_id' => $userId,
+                    'tanggal' => $tanggal,
                     'transaksi_id' => $transaksiBaru->id, // ID transaksi akan diisi setelah transaksi dibuat
                     'valuasi_saat_ini' => $valuasiSaatIniBaru,
                     'yield' => 0.00,
@@ -685,6 +726,7 @@ class SaldoController extends Controller
                 // Tambahkan data ke Portofolio
                 Portofolio::create([
                     'user_id' => $userId,
+                    'tanggal' => $tanggal,
                     'aset_id' => 1, // ID aset untuk "kas"
                     'kinerja_portofolio_id' => $kinerjaPortofolioBaru->id,
                     'volume' => 1,
@@ -694,9 +736,13 @@ class SaldoController extends Controller
             } else {
                 // Jika sudah ada data mutasi dana untuk tahun ini
                 $modalLama = $mutasiDanaTerakhir->modal;
-                $hargaUnitSaatIni = ceil(
-                    ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $mutasiDanaTerakhir->jumlah_unit_penyertaan
-                );
+                // $hargaUnitSaatIni = ceil(
+                //     ($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $mutasiDanaTerakhir->jumlah_unit_penyertaan
+                // );
+                $jumlahUnitPenyertaan = $mutasiDanaTerakhir->jumlah_unit_penyertaan ?? 0;
+                $hargaUnitSaatIni = $jumlahUnitPenyertaan > 0
+                    ? round(($kinerjaPortofolioTerakhir->valuasi_saat_ini ?? 0) / $jumlahUnitPenyertaan, 4)
+                    : 1000;
 
                 $jumlahUnitPenyertaanBaru = ($jumlahSaldo / $hargaUnitSaatIni) + $mutasiDanaTerakhir->jumlah_unit_penyertaan;
 
@@ -883,7 +929,7 @@ class SaldoController extends Controller
                         $mutasi_baru->harga_unit = $mutasi->harga_unit;
                         
                         // mencari harga unit baru saat ini
-                        $mutasi_baru->harga_unit_saat_ini = ceil($kinerja->valuasi_saat_ini / $mutasi->jumlah_unit_penyertaan);
+                        $mutasi_baru->harga_unit_saat_ini = round($kinerja->valuasi_saat_ini / $mutasi->jumlah_unit_penyertaan, 4);
                         
                         // mencari jumlah unit penyertaan baru
                         $mutasi_baru->jumlah_unit_penyertaan = ($reqsaldo / ($kinerja->valuasi_saat_ini / $mutasi->jumlah_unit_penyertaan)) + $mutasi->jumlah_unit_penyertaan;

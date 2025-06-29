@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;
 use Exception;
 
+
 class KategoriPemasukanController extends Controller
 {
     public function index(Request $request) 
@@ -24,7 +25,14 @@ class KategoriPemasukanController extends Controller
                 'message' => 'Berhasil mendapatkan kategori pemasukan.',
                 'auth' => $request->auth,
                 'data' => [
-                    'kategori_pemasukan' => $kategori_pemasukan->get()
+                    'kategori_pemasukan' => $kategori_pemasukan->get()->map(function($item) {
+                        return [
+                            'id' => $item->id,
+                            'user_id' => $item->user_id,
+                            'nama_kategori_pemasukan' => $item->nama_kategori, // field dinamis dari accessor
+                            // Tambahkan field lain jika perlu
+                        ];
+                    })
                 ],
             ], Response::HTTP_OK);
         } catch (Exception $e) {

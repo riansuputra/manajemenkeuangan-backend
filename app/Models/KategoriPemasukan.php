@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\App;
 
 class KategoriPemasukan extends Model
 {
@@ -23,5 +24,16 @@ class KategoriPemasukan extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+    public function getNamaKategoriAttribute()
+    {
+        $locale = App::getLocale(); // atau session('locale', 'id');
+        
+        // Kembalikan nama sesuai locale
+        if ($locale === 'en' && $this->nama_kategori_pemasukan_en) {
+            return $this->nama_kategori_pemasukan_en;
+        }
+
+        return $this->nama_kategori_pemasukan;
     }
 }

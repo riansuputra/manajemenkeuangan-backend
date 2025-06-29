@@ -96,7 +96,7 @@
 
   <!-- start preheader -->
   <div class="preheader" style="display: none; max-width: 0; max-height: 0; overflow: hidden; font-size: 1px; line-height: 1px; color: #fff; opacity: 0;">
-  Hai {{$email}}, Terima kasih telah bergabung bersama kami di Smart Finance. Silakan verifikasi email Anda terlebih dahulu.
+  Hai {$email}, Terima kasih telah bergabung bersama kami di Smart Finance. Silakan verifikasi email Anda terlebih dahulu.
   </div>
   <!-- end preheader -->
 
@@ -144,7 +144,7 @@
           <!-- start copy -->
           <tr>
             <td align="center" bgcolor="#ffffff" style="padding: 24px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 24px;">
-              <p style="margin: 0;">Hai {{$email}}, Terima kasih telah bergabung bersama kami di Smart Finance. Silakan verifikasi email Anda lewat tombol di bawah ini:</p>
+              <p style="margin: 0;">Hai Yansu, Kami menerima permintaan untuk mengganti password akun Anda di Smart Finance. Jika Anda yang melakukan permintaan ini, silakan atur ulang password Anda dengan menekan tombol di bawah ini:</p>
             </td>
           </tr>
           <!-- end copy -->
@@ -158,7 +158,7 @@
                     <table border="0" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="center" bgcolor="#1a82e2" style="border-radius: 6px;">
-                          <a href="{{ 'http://localhost:8001' . '/email-verification?code=' . $code }}" target="_blank" style="display: inline-block; padding: 10px 30px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 16px; color: #ffffff; text-decoration: none; border-radius: 6px;">Verifikasi Email</a>
+                          <a href="{{ $token }}" target="_blank" style="display: inline-block; padding: 10px 30px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 16px; color: #ffffff; text-decoration: none; border-radius: 6px;">Ganti Password</a>
                         </td>
                       </tr>
                     </table>
@@ -172,8 +172,8 @@
           <!-- start copy -->
           <tr>
             <td align="center" bgcolor="#ffffff" style="padding: 24px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 24px;">
-              <p style="margin: 0;">Jika tautan di atas tidak berfungsi, salin dan tempel tautan berikut ke browser:</p>
-              <p style="margin: 0;"><a href="{{ 'http://localhost:8001' . '/email-verification?code=' . $code }}" target="_blank">{{ 'http://localhost:8001' . '/email-verification?code=' . $code }}</a></p>
+              <p style="margin: 0;">Jika tombol di atas tidak berfungsi, salin dan tempel tautan berikut ke browser Anda:</p>
+              <p style="margin: 0;"><a href="{{ $token }}" target="_blank">{{ $token }}</a></p>
             </td>
           </tr>
           <!-- end copy -->
@@ -201,7 +201,7 @@
           <!-- start permission -->
           <tr>
             <td align="center" bgcolor="#ffffff" style="padding: 12px 24px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 20px; color: #666;">
-              <p style="margin: 0;">Anda menerima email ini karena kami mendapatkan permintaan untuk mendaftarkan akun baru dengan email Anda. Jika Anda tidak merasa mendaftar akun baru, jangan khawatir, Anda bisa abaikan dan hapus email ini.</p>
+              <p style="margin: 0;">Jika Anda tidak merasa mengajukan permintaan ganti password, jangan khawatir. Akun Anda tetap aman, dan Anda bisa mengabaikan serta menghapus email ini.</p>
             </td>
           </tr>
           <!-- end permission -->
@@ -209,7 +209,7 @@
           <!-- start unsubscribe -->
           <tr>
             <td align="center" bgcolor="#ffffff" style="padding: 12px 24px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 20px; color: #666;">
-              <p style="margin: 0;">© 2024 Smart Finance. All rights reserved.</p>
+              <p style="margin: 0;">© 2025 Smart Finance. All rights reserved.</p>
             </td>
           </tr>
           <!-- end unsubscribe -->
